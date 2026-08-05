@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Scan — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+  </button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="/dashboard">
+        <div class="brand-icon"><i data-lucide="scan-face" style="width:20px;height:20px;color:#fff;"></i></div>
+        <span class="brand-text">DentAI</span>
+      </a>
+    </div>
+    <nav>
+      <span class="nav-section-label">Main</span>
+      <a href="/dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i></span>Dashboard</a>
+      <a href="/upload" class="active"><span class="nav-icon"><i data-lucide="upload-cloud" style="width:16px;height:16px;"></i></span>Upload Scan</a>
+      <a href="/results"><span class="nav-icon"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i></span>Results</a>
+      <span class="nav-section-label">Tools</span>
+      <a href="/workflow"><span class="nav-icon"><i data-lucide="workflow" style="width:16px;height:16px;"></i></span>Workflow</a>
+      <a href="/history"><span class="nav-icon"><i data-lucide="clock" style="width:16px;height:16px;"></i></span>History</a>
+    </nav>
+    <div class="user-info">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">D</div>
+        <div class="user-details">
+          <div class="name" id="sb-name">Doctor</div>
+          <div class="email" id="sb-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <i data-lucide="log-out" style="width:13px;height:13px;"></i>Sign out
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Upload Scan</h1>
+        <p>Import a DICOM, NIfTI or ZIP file to begin AI segmentation</p>
+      </div>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="upload-steps" id="step-indicator" aria-label="Upload steps">
+      <div class="upload-step-item">
+        <div class="upload-step-num active" id="sn-1">1</div>
+        <span class="upload-step-label active" id="sl-1">Select File</span>
+      </div>
+      <div class="upload-step-connector" id="sc-1"></div>
+      <div class="upload-step-item">
+        <div class="upload-step-num" id="sn-2">2</div>
+        <span class="upload-step-label" id="sl-2">Verify Info</span>
+      </div>
+      <div class="upload-step-connector" id="sc-2"></div>
+      <div class="upload-step-item">
+        <div class="upload-step-num" id="sn-3">3</div>
+        <span class="upload-step-label" id="sl-3">Upload</span>
+      </div>
+      <div class="upload-step-connector" id="sc-3"></div>
+      <div class="upload-step-item">
+        <div class="upload-step-num" id="sn-4">4</div>
+        <span class="upload-step-label" id="sl-4">AI Analysis</span>
+      </div>
+    </div>
+
+    <!-- ══ STEP 1: Drop zone ══ -->
+    <div id="step-upload">
+      <div class="card">
+        <div class="card-header">
+          <h3>Step 1 — Select File</h3>
+          <div style="display:flex;gap:8px;">
+            <span class="uzl-fmt dcm">.dcm</span>
+            <span class="uzl-fmt nii">.nii</span>
+            <span class="uzl-fmt niigz">.nii.gz</span>
+            <span class="uzl-fmt zip">.zip</span>
+          </div>
+        </div>
+
+        <div class="upload-zone-lg" id="drop-zone"
+             role="button" tabindex="0"
+             aria-label="Click or drag and drop your scan file here">
+          <div class="uzl-icon">
+            <i data-lucide="upload-cloud" style="width:36px;height:36px;"></i>
+          </div>
+          <div class="uzl-title">Drag &amp; Drop your scan file here</div>
+          <div class="uzl-sub">or click to browse from your computer</div>
+          <div class="uzl-formats">
+            <span class="uzl-fmt dcm">DICOM &nbsp;.dcm</span>
+            <span class="uzl-fmt nii">NIfTI &nbsp;.nii</span>
+            <span class="uzl-fmt niigz">NIfTI GZ &nbsp;.nii.gz</span>
+            <span class="uzl-fmt zip">ZIP Archive &nbsp;.zip</span>
+          </div>
+          <div class="uzl-hint">Maximum file size: 2 GB &nbsp;·&nbsp; All data is processed locally</div>
+        </div>
+        <input type="file" id="file-input" accept=".dcm,.nii,.nii.gz,.zip" style="display:none;" />
+
+        <!-- Validation message -->
+        <div class="val-msg error" id="val-error">
+          <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
+          <span id="val-error-text"></span>
+        </div>
+
+        <!-- File preview card (shown after file selected) -->
+        <div class="file-preview-card" id="file-preview">
+          <div class="fpc-header">
+            <div class="fpc-icon" id="fpc-icon">
+              <i data-lucide="file-scan" style="width:24px;height:24px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="fpc-name" id="fpc-name">—</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                <span class="fpc-badge" id="fpc-type-badge">.dcm</span>
+                <span style="font-size:12px;color:var(--text-muted);" id="fpc-size">—</span>
+                <span style="font-size:12px;color:var(--text-muted);" id="fpc-mod">—</span>
+              </div>
+            </div>
+            <button class="btn-outline" onclick="clearFile()" style="flex-shrink:0;padding:7px 14px;font-size:12px;">
+              <i data-lucide="x" style="width:13px;height:13px;"></i>Remove
+            </button>
+          </div>
+
+          <!-- Patient info grid -->
+          <div class="patient-info-grid">
+            <div class="pi-cell">
+              <div class="pi-label">Patient Name</div>
+              <div class="pi-value" id="pi-patient-name">—</div>
+            </div>
+            <div class="pi-cell">
+              <div class="pi-label">Patient ID</div>
+              <div class="pi-value" id="pi-patient-id">—</div>
+            </div>
+            <div class="pi-cell">
+              <div class="pi-label">Scan Date</div>
+              <div class="pi-value" id="pi-scan-date">—</div>
+            </div>
+            <div class="pi-cell">
+              <div class="pi-label">File Size</div>
+              <div class="pi-value" id="pi-file-size">—</div>
+            </div>
+          </div>
+
+          <!-- Slice previews -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+              <i data-lucide="layers" style="width:13px;height:13px;"></i>
+              Slice Previews (simulated — actual slices load post-upload)
+            </div>
+            <div class="slice-preview-grid" id="slice-grid">
+              <!-- Built by JS -->
+            </div>
+          </div>
+
+          <button class="btn-primary" id="btn-upload" onclick="uploadScan()" style="width:auto;padding:12px 32px;margin-top:4px;">
+            <i data-lucide="upload-cloud" style="width:15px;height:15px;"></i>Upload Scan
+          </button>
+        </div>
+
+        <!-- Upload progress -->
+        <div class="upload-progress-card" id="upload-progress-card">
+          <div class="upc-status">
+            <span class="spinner" style="border-top-color:var(--accent);border-color:rgba(59,130,246,.2);"></span>
+            <span class="upc-label" id="upc-label">Uploading scan…</span>
+            <span class="upc-pct" id="upc-pct">0%</span>
+          </div>
+          <div class="upc-bar-bg">
+            <div class="upc-bar-fill" id="upc-fill"></div>
+          </div>
+          <div class="upc-steps" id="upc-steps">
+            <span class="upc-step" id="ups-0">Validating</span>
+            <span class="upc-step" id="ups-1">Transferring</span>
+            <span class="upc-step" id="ups-2">Parsing metadata</span>
+            <span class="upc-step" id="ups-3">Indexing</span>
+            <span class="upc-step" id="ups-4">Complete</span>
+          </div>
+        </div>
+
+        <!-- Success banner -->
+        <div class="success-banner" id="success-banner">
+          <div class="sb-icon"><i data-lucide="check-circle-2" style="width:22px;height:22px;"></i></div>
+          <div>
+            <div class="sb-title">Scan uploaded successfully!</div>
+            <div class="sb-sub" id="sb-sub">Scroll down to review metadata and run AI segmentation.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 2: Metadata + Analysis ══ -->
+    <div class="card hidden" id="step-meta">
+      <div class="card-header">
+        <h3>Step 2 — Scan Metadata</h3>
+        <span class="badge low">
+          <i data-lucide="check-circle-2" style="width:11px;height:11px;"></i>Uploaded
+        </span>
+      </div>
+
+      <div class="patient-info-grid" style="margin-bottom:20px;">
+        <div class="pi-cell">
+          <div class="pi-label">Filename</div>
+          <div class="pi-value" style="font-size:12px;word-break:break-all;" id="meta-filename">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Modality</div>
+          <div class="pi-value" id="meta-modality">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Dimensions</div>
+          <div class="pi-value" id="meta-dims">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Pixel Range</div>
+          <div class="pi-value" id="meta-pixels">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Scan ID</div>
+          <div class="pi-value" id="meta-scanid">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Patient Name</div>
+          <div class="pi-value" id="meta-patient">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Patient ID</div>
+          <div class="pi-value" id="meta-pid">—</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-label">Scan Date</div>
+          <div class="pi-value" id="meta-date">—</div>
+        </div>
+      </div>
+
+      <!-- Analysis progress -->
+      <div class="upload-progress-card" id="analysis-progress-card" style="display:block;">
+        <div class="upc-status">
+          <span class="upc-label" id="analysis-label" style="font-size:13px;">Ready to analyse</span>
+          <span class="upc-pct" id="analysis-pct"></span>
+        </div>
+        <div class="upc-bar-bg">
+          <div class="upc-bar-fill" id="analysis-fill" style="width:0%;"></div>
+        </div>
+        <div class="upc-steps" id="analysis-steps">
+          <span class="upc-step" id="as-0">Load volume</span>
+          <span class="upc-step" id="as-1">Normalise</span>
+          <span class="upc-step" id="as-2">Segment</span>
+          <span class="upc-step" id="as-3">Partition</span>
+          <span class="upc-step" id="as-4">STL export</span>
+          <span class="upc-step" id="as-5">Report</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+        <button class="btn-primary" id="btn-analyze" onclick="runAnalysis()" style="width:auto;padding:12px 32px;">
+          <i data-lucide="cpu" style="width:15px;height:15px;"></i>Run AI Segmentation
+        </button>
+        <button class="btn-outline" onclick="resetPage()">
+          <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i>Upload Another
+        </button>
+        <button class="btn-outline" onclick="window.location.href='/workflow'">
+          <i data-lucide="workflow" style="width:14px;height:14px;"></i>View Workflow
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  lucide.createIcons();
+  requireAuth();
+  populateSidebar();
+
+  const u = store.get('user');
+  if (u) { const av = document.getElementById('user-avatar'); if (av) av.textContent = u.name.charAt(0).toUpperCase(); }
+
+  document.getElementById('menu-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
+  });
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  });
+
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    el.className = 'toast ' + type + ' show';
+    const dot = el.querySelector('.toast-dot');
+    if (dot) dot.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--accent)';
+    setTimeout(() => el.classList.remove('show'), 3400);
+  }
+
+  /* ── Step indicator helpers ── */
+  function setStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const num = document.getElementById('sn-' + i);
+      const lbl = document.getElementById('sl-' + i);
+      const con = document.getElementById('sc-' + (i));
+      if (i < n)  { num.className = 'upload-step-num done';   num.innerHTML = '<i data-lucide="check" style="width:13px;height:13px;"></i>'; lbl.className = 'upload-step-label done'; if (con) con.classList.add('done'); }
+      else if (i === n) { num.className = 'upload-step-num active'; num.textContent = i; lbl.className = 'upload-step-label active'; }
+      else         { num.className = 'upload-step-num'; num.textContent = i; lbl.className = 'upload-step-label'; }
+    }
+    lucide.createIcons();
+  }
+
+  /* ── Validation ── */
+  const ALLOWED = ['.dcm', '.nii', '.nii.gz', '.zip'];
+  const MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
+
+  function validateFile(file) {
+    const name = file.name.toLowerCase();
+    const ok   = ALLOWED.some(ext => name.endsWith(ext));
+    if (!ok)            return 'Unsupported format. Please upload .dcm, .nii, .nii.gz or .zip.';
+    if (file.size === 0) return 'File appears to be empty.';
+    if (file.size > MAX_BYTES) return 'File exceeds the 2 GB limit.';
+    return null;
+  }
+
+  function showValError(msg) {
+    const el = document.getElementById('val-error');
+    document.getElementById('val-error-text').textContent = msg;
+    el.style.display = 'flex';
+    lucide.createIcons();
+  }
+  function hideValError() {
+    document.getElementById('val-error').style.display = 'none';
+  }
+
+  /* ── File type helpers ── */
+  function getFileType(name) {
+    name = name.toLowerCase();
+    if (name.endsWith('.nii.gz')) return 'niigz';
+    if (name.endsWith('.nii'))    return 'nii';
+    if (name.endsWith('.zip'))    return 'zip';
+    return 'dcm';
+  }
+  function fmtSize(bytes) {
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+    if (bytes >= 1048576)    return (bytes / 1048576).toFixed(1) + ' MB';
+    return (bytes / 1024).toFixed(0) + ' KB';
+  }
+
+  /* ── Slice placeholder grid ── */
+  function buildSliceGrid(type) {
+    const grid = document.getElementById('slice-grid');
+    const labels = ['Slice 1/5', 'Slice 2/5', 'Slice 3/5', 'Slice 4/5', 'Slice 5/5'];
+    const colors = ['#0d1a2e','#0f1f36','#111827','#0d1520','#0a1220'];
+    grid.innerHTML = labels.map((lbl, i) => `
+      <div class="slice-thumb ${i===2?'active':''}" onclick="selectSlice(this)">
+        <div class="slice-placeholder" style="background:${colors[i]};">
+          <i data-lucide="scan-line" style="width:22px;height:22px;color:rgba(59,130,246,.4);"></i>
+          <span style="font-size:9px;color:rgba(59,130,246,.5);">${type.toUpperCase()}</span>
+        </div>
+        <div class="slice-label">${lbl}</div>
+      </div>`).join('');
+    lucide.createIcons();
+  }
+  function selectSlice(el) {
+    document.querySelectorAll('.slice-thumb').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  /* ── Handle file ── */
+  let selectedFile = null;
+  let currentScanId = null;
+
+  const dropZone  = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+  function handleFile(file) {
+    hideValError();
+    const err = validateFile(file);
+    if (err) { showValError(err); return; }
+
+    selectedFile = file;
+    const type   = getFileType(file.name);
+    const size   = fmtSize(file.size);
+    const now    = new Date();
+
+    // Fill preview card
+    document.getElementById('fpc-name').textContent = file.name;
+    document.getElementById('fpc-size').textContent = size;
+    document.getElementById('fpc-mod').textContent  = type === 'dcm' ? 'DICOM' : type === 'zip' ? 'ZIP' : 'NIfTI';
+
+    const badge = document.getElementById('fpc-type-badge');
+    const typeLabels = { dcm:'.dcm', nii:'.nii', niigz:'.nii.gz', zip:'.zip' };
+    badge.textContent = typeLabels[type];
+    badge.style.background = type === 'dcm' ? 'rgba(59,130,246,.15)' : type === 'nii' ? 'rgba(6,182,212,.15)' : type === 'zip' ? 'rgba(245,158,11,.15)' : 'rgba(139,92,246,.15)';
+    badge.style.color = type === 'dcm' ? '#93c5fd' : type === 'nii' ? '#67e8f9' : type === 'zip' ? '#fcd34d' : '#c4b5fd';
+    badge.style.padding = '2px 8px'; badge.style.borderRadius = '20px';
+
+    const icon = document.getElementById('fpc-icon');
+    icon.className = 'fpc-icon ' + type;
+
+    // Patient info (simulated for client-side — real values populated after upload)
+    document.getElementById('pi-patient-name').textContent = 'Pending upload…';
+    document.getElementById('pi-patient-id').textContent   = 'Pending upload…';
+    document.getElementById('pi-scan-date').textContent    = now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('pi-file-size').textContent    = size;
+
+    buildSliceGrid(type);
+    document.getElementById('file-preview').style.display = 'block';
+    setStep(2);
+    lucide.createIcons();
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('file-preview').style.display = 'none';
+    document.getElementById('upload-progress-card').style.display = 'none';
+    document.getElementById('success-banner').style.display = 'none';
+    hideValError();
+    setStep(1);
+  }
+
+  /* ── Upload ── */
+  async function uploadScan() {
+    if (!selectedFile) return;
+
+    const btn  = document.getElementById('btn-upload');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Uploading…';
+
+    // Show progress card
+    const progCard = document.getElementById('upload-progress-card');
+    progCard.style.display = 'block';
+    const fill    = document.getElementById('upc-fill');
+    const pctEl   = document.getElementById('upc-pct');
+    const labelEl = document.getElementById('upc-label');
+    const stepIds  = ['ups-0','ups-1','ups-2','ups-3','ups-4'];
+    const stepLabels = ['Validating file…','Transferring data…','Parsing metadata…','Indexing scan…','Finalising…'];
+
+    setStep(3);
+
+    // Animate progress in phases
+    let p = 0;
+    let phase = 0;
+    const phases = [[0,20,180],[20,60,140],[60,80,120],[80,92,100],[92,98,80]];
+
+    function runPhase(ph) {
+      if (ph >= phases.length) return;
+      const [from, to, interval] = phases[ph];
+      stepIds.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (i < ph)  el.className = 'upc-step done';
+        else if (i === ph) el.className = 'upc-step active';
+        else         el.className = 'upc-step';
+      });
+      labelEl.textContent = stepLabels[ph] || stepLabels[stepLabels.length-1];
+    }
+
+    runPhase(0);
+    const ticker = setInterval(() => {
+      p = Math.min(p + 2, 98);
+      fill.style.width = p + '%';
+      pctEl.textContent = p + '%';
+      const ph = phases.findIndex(([,to]) => p < to);
+      if (ph >= 0 && ph !== phase) { phase = ph; runPhase(ph); }
+    }, 90);
+
+    try {
+      const fd = new FormData();
+      fd.append('file', selectedFile);
+      const data = await postFile('/upload', fd);
+
+      clearInterval(ticker);
+      fill.style.width = '100%'; pctEl.textContent = '100%';
+      stepIds.forEach(id => document.getElementById(id).className = 'upc-step done');
+      labelEl.textContent = 'Upload complete!';
+
+      if (data.error) {
+        showValError('Upload error: ' + data.error);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="upload-cloud" style="width:15px;height:15px;"></i>Retry Upload';
+        lucide.createIcons();
+        return;
+      }
+
+      currentScanId = data.scan_id;
+      const m = data.metadata || {};
+
+      // Populate real patient info from server
+      document.getElementById('pi-patient-name').textContent = m.patient_name || m.PatientName || 'N/A';
+      document.getElementById('pi-patient-id').textContent   = m.patient_id   || m.PatientID   || ('SCN-' + String(data.scan_id).padStart(4,'0'));
+      document.getElementById('pi-scan-date').textContent    = m.study_date   || m.StudyDate   || new Date().toLocaleDateString('en-GB');
+
+      // Show success banner
+      const banner = document.getElementById('success-banner');
+      document.getElementById('sb-sub').textContent = 'Scan #' + data.scan_id + ' — ' + data.filename + ' — ready for AI segmentation.';
+      banner.style.display = 'flex';
+      lucide.createIcons();
+      toast('Scan uploaded — Scan #' + data.scan_id, 'success');
+
+      // Populate step 2 metadata
+      document.getElementById('meta-filename').textContent = data.filename;
+      document.getElementById('meta-modality').textContent = m.modality || 'CBCT';
+      document.getElementById('meta-scanid').textContent   = '#' + data.scan_id;
+      document.getElementById('meta-dims').textContent     = m.image_shape ? m.image_shape.join(' × ') : ((m.rows||'—') + ' × ' + (m.columns||'—'));
+      document.getElementById('meta-pixels').textContent   = (m.min_pixel !== undefined ? m.min_pixel.toFixed(2) : '—') + ' – ' + (m.max_pixel !== undefined ? m.max_pixel.toFixed(2) : '—');
+      document.getElementById('meta-patient').textContent  = m.patient_name || m.PatientName || 'N/A';
+      document.getElementById('meta-pid').textContent      = m.patient_id   || m.PatientID   || 'N/A';
+      document.getElementById('meta-date').textContent     = m.study_date   || m.StudyDate   || '—';
+
+      // Transition to step-meta
+      setTimeout(() => {
+        document.getElementById('step-upload').classList.add('hidden');
+        document.getElementById('step-meta').classList.remove('hidden');
+        setStep(4);
+        lucide.createIcons();
+        window.scrollTo({top: 0, behavior:'smooth'});
+      }, 1200);
+
+    } catch (err) {
+      clearInterval(ticker);
+      progCard.style.display = 'none';
+      showValError('Upload failed: ' + err.message + '. Check the server is running.');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="upload-cloud" style="width:15px;height:15px;"></i>Retry Upload';
+      lucide.createIcons();
+    }
+  }
+
+  /* ── Run Analysis ── */
+  async function runAnalysis() {
+    if (!currentScanId) return;
+    const btn = document.getElementById('btn-analyze');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Analysing…';
+
+    const label = document.getElementById('analysis-label');
+    const fill  = document.getElementById('analysis-fill');
+    const apct  = document.getElementById('analysis-pct');
+    const progCard = document.getElementById('analysis-progress-card');
+    progCard.style.display = 'block';
+
+    const steps = [
+      [10, 'Load volume', 'as-0'],
+      [25, 'Normalise', 'as-1'],
+      [45, 'Segment', 'as-2'],
+      [65, 'Partition', 'as-3'],
+      [80, 'STL export', 'as-4'],
+      [95, 'Report', 'as-5']
+    ];
+    const stepMessages = [
+      'Loading DICOM volume…',
+      'Normalising volume intensities…',
+      'Running AI segmentation model…',
+      'Partitioning 7 mandible regions…',
+      'Exporting STL meshes…',
+      'Generating clinical report…'
+    ];
+
+    let si = 0;
+    const ticker = setInterval(() => {
+      if (si < steps.length) {
+        fill.style.width  = steps[si][0] + '%';
+        apct.textContent  = steps[si][0] + '%';
+        label.textContent = stepMessages[si];
+        // update badges
+        steps.forEach(([,, id], idx) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          if (idx < si)  el.className = 'upc-step done';
+          else if (idx === si) el.className = 'upc-step active';
+          else el.className = 'upc-step';
+        });
+        lucide.createIcons();
+        si++;
+      }
+    }, 700);
+
+    try {
+      const data = await fetch('/analyze/' + currentScanId, { method: 'POST' }).then(r => r.json());
+      clearInterval(ticker);
+      fill.style.width = '100%'; apct.textContent = '100%';
+      label.textContent = 'Analysis complete!';
+      steps.forEach(([,,id]) => { const el = document.getElementById(id); if (el) el.className = 'upc-step done'; });
+
+      if (data.error) {
+        toast('Analysis error: ' + data.error, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="cpu" style="width:15px;height:15px;"></i>Run AI Segmentation';
+        lucide.createIcons();
+        return;
+      }
+
+      store.set('lastResult', data);
+      toast('Analysis complete! Loading results…', 'success');
+      setTimeout(() => window.location.href = '/results', 900);
+
+    } catch (err) {
+      clearInterval(ticker);
+      toast('Analysis failed: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="cpu" style="width:15px;height:15px;"></i>Run AI Segmentation';
+      lucide.createIcons();
+    }
+  }
+
+  /* ── Reset ── */
+  function resetPage() {
+    selectedFile = null; currentScanId = null; fileInput.value = '';
+    document.getElementById('file-preview').style.display      = 'none';
+    document.getElementById('upload-progress-card').style.display = 'none';
+    document.getElementById('success-banner').style.display    = 'none';
+    document.getElementById('step-upload').classList.remove('hidden');
+    document.getElementById('step-meta').classList.add('hidden');
+    hideValError(); setStep(1);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+</script>
+</body>
+</html>
