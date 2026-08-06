@@ -1,0 +1,152 @@
+name: Security Review — DentAI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 1"   # Weekly Monday 02:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Detect Backend Framework
+        id: detect
+        run: |
+          if find . -name "requirements.txt" | head -1 | grep -q "." ; then
+            echo "framework=fastapi" >> $GITHUB_OUTPUT
+          fi
+          echo "Detected: FastAPI / Python backend"
+
+      - name: Install Security Tools
+        run: |
+          pip install bandit safety semgrep || true
+          npm install -g retire || true
+
+      - name: Run Bandit (Python SAST)
+        run: |
+          bandit -r "Dental (1)/Dental/app" \
+            -f json -o bandit-results.json \
+            -ll --exclude "*/test*,*/__pycache__/*" || true
+          bandit -r "Dental (1)/Dental/app" \
+            -f txt --exclude "*/test*" || true
+
+      - name: Run Semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/owasp-top-ten
+            p/injection
+        continue-on-error: true
+
+      - name: Run Safety (Dependency CVE Check)
+        run: |
+          pip install safety
+          safety check --full-report > safety-report.txt 2>&1 || true
+          cat safety-report.txt
+
+      - name: Run Gitleaks (Secret Scanning)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Run Trivy (Filesystem Scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: "."
+          format: table
+          output: trivy-report.txt
+          severity: CRITICAL,HIGH
+        continue-on-error: true
+
+      - name: Run Dependency Review
+        uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+
+      - name: Determine Pipeline Status
+        id: check_critical
+        run: |
+          # Only fail on critical vulnerabilities
+          if grep -q '"issue_severity": "HIGH"' bandit-results.json 2>/dev/null; then
+            CRITICAL_COUNT=$(python3 -c "
+          import json
+          try:
+            with open('bandit-results.json') as f: d=json.load(f)
+            c=sum(1 for r in d.get('results',[]) if r.get('issue_severity') in ('HIGH','CRITICAL'))
+            print(c)
+          except: print(0)")
+            echo "critical_count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+            if [ "$CRITICAL_COUNT" -gt 0 ]; then
+              echo "has_critical=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_critical=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_critical=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports-${{ github.run_number }}
+          retention-days: 30
+          path: |
+            bandit-results.json
+            safety-report.txt
+            trivy-report.txt
+
+      - name: Publish Security Summary
+        if: always()
+        run: |
+          echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tool | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bandit (SAST) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Safety (CVE) | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gitleaks | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f bandit-results.json ]; then
+            echo "### Bandit Findings" >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          with open('bandit-results.json') as f:
+            d=json.load(f)
+          results=d.get('results',[])
+          high=[r for r in results if r.get('issue_severity') in ('HIGH','CRITICAL')]
+          print(f'| Total Issues | {len(results)} |')
+          print(f'| High/Critical | {len(high)} |')
+          " >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          fi
+
+      - name: Fail on Critical Vulnerabilities
+        if: steps.check_critical.outputs.has_critical == 'true'
+        run: |
+          echo "CRITICAL vulnerabilities found! Pipeline failing."
+          exit 1

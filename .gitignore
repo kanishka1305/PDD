@@ -1,0 +1,70 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# ── Test output (generated at runtime — never commit) ─────────────────────────
+Test Results/
+test-results/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.log
+
+# ── Selenium / WebDriver cache ────────────────────────────────────────────────
+.wdm/
+drivers/
+automation/drivers/
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Node (selenium_tests/) ────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ── Android build artifacts ───────────────────────────────────────────────────
+*.apk
+*.aab
+DentAI-Mobile/android/.gradle/
+DentAI-Mobile/android/app/build/
+Dental-segment-frontend/app/build/
+
+# ── Database ──────────────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+*.pem
+*.key
+secrets.json
+credentials.json

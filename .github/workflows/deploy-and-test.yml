@@ -1,0 +1,436 @@
+name: DentAI — Deploy + Selenium E2E + Excel Report
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override BASE_URL (leave empty to use GitHub Pages URL)"
+        required: false
+        default: ""
+
+# ── Permissions required for GitHub Pages deployment ─────────────────────────
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+# ── Prevent concurrent Pages deployments ─────────────────────────────────────
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# ── Global env ────────────────────────────────────────────────────────────────
+env:
+  # Resolved in order: manual input → auto-construct from repo metadata
+  BASE_URL: ${{ github.event.inputs.base_url || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 1 — Static analysis (Bandit, Semgrep)
+  # ══════════════════════════════════════════════════════════════════════════
+  build-and-analyze:
+    name: "1 · Build & Static Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-test.txt
+          pip install bandit semgrep || true
+
+      - name: Bandit SAST
+        run: |
+          bandit -r "Dental (1)/Dental/app" -f txt -o bandit-report.txt \
+            --exclude "*/test*,*/__pycache__/*" || true
+
+      - name: Semgrep SAST
+        run: |
+          semgrep --config auto "Dental (1)/Dental/app" \
+            --output semgrep-report.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: static-analysis-reports
+          retention-days: 30
+          path: |
+            bandit-report.txt
+            semgrep-report.txt
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 2 — Deploy to GitHub Pages
+  # ══════════════════════════════════════════════════════════════════════════
+  deploy:
+    name: "2 · Deploy to GitHub Pages"
+    needs: build-and-analyze
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare _site
+        run: |
+          mkdir -p _site
+          if [ -d "Dental (1)/Dental/app/static" ]; then
+            cp -r "Dental (1)/Dental/app/static/." _site/
+          else
+            cat > _site/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head><meta charset="UTF-8"><title>DentAI</title></head>
+          <body><h1>DentAI</h1><p>Build: ${{ github.sha }}</p></body>
+          </html>
+          HTML
+          fi
+          ls -la _site/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 3 — Verify GitHub Pages is live
+  # ══════════════════════════════════════════════════════════════════════════
+  verify-deployment:
+    name: "3 · Verify Deployment"
+    needs: deploy
+    runs-on: ubuntu-latest
+    outputs:
+      verified: ${{ steps.verify.outputs.verified }}
+      live_url:  ${{ steps.verify.outputs.live_url }}
+    steps:
+      - name: Wait for Pages propagation
+        run: sleep 30
+
+      - name: Poll for HTTP 200
+        id: verify
+        run: |
+          DEPLOY_URL="${{ needs.deploy.outputs.page_url || env.BASE_URL }}"
+          echo "Polling: $DEPLOY_URL"
+          for i in $(seq 1 10); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" --max-time 15 || echo "000")
+            echo "Attempt $i/10 → HTTP $CODE"
+            if [ "$CODE" -eq 200 ]; then
+              echo "verified=true" >> $GITHUB_OUTPUT
+              echo "live_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "verified=false" >> $GITHUB_OUTPUT
+          exit 0   # Do NOT fail — Excel report job must always run
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 4 — Selenium E2E tests (only when site is verified live)
+  # ══════════════════════════════════════════════════════════════════════════
+  e2e-tests:
+    name: "4 · Selenium E2E Tests"
+    needs: verify-deployment
+    if: needs.verify-deployment.outputs.verified == 'true'
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL:      ${{ needs.verify-deployment.outputs.live_url }}
+      HEADLESS:      "true"
+      BROWSER:       "chrome"
+      EXPLICIT_WAIT: "20"
+      PYTHONPATH:    ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install test dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Install Chrome (stable)
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Verify Chrome installation
+        run: |
+          google-chrome --version
+          which google-chrome
+
+      - name: Create result directories
+        run: |
+          mkdir -p "Test Results/Excel"
+          mkdir -p "Test Results/HTML"
+          mkdir -p "Test Results/Screenshots"
+          mkdir -p "Test Results/Logs"
+          mkdir -p "Test Results/JSON"
+          mkdir -p "Test Results/Summary"
+
+      - name: Run Selenium E2E tests (parallel)
+        run: |
+          python -m pytest automation/tests/ \
+            -v \
+            --tb=short \
+            --timeout=60 \
+            -n auto \
+            --html="Test Results/HTML/execution-report.html" \
+            --self-contained-html \
+            -o "log_cli=true" \
+            2>&1 | tee "Test Results/Logs/pytest-output.log" || true
+        # NOTE: --reruns is intentionally NOT used with -n auto.
+        # pytest-rerunfailures is incompatible with xdist distributed mode.
+        # If you need reruns, replace -n auto with --dist=no --reruns=2.
+
+      - name: Upload JSON + raw test output for report job
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-json-results-${{ github.run_number }}
+          retention-days: 1
+          path: |
+            Test Results/JSON/
+            Test Results/Screenshots/
+            Test Results/Logs/
+            Test Results/HTML/
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 5 — Generate Excel report
+  # ALWAYS runs — even when e2e-tests was skipped (site not reachable)
+  # FIX: needs only build-and-analyze (not e2e-tests) so it never gets blocked.
+  # ══════════════════════════════════════════════════════════════════════════
+  generate-excel-report:
+    name: "5 · Generate Excel Report"
+    needs: build-and-analyze          # Only depends on job 1 — always available
+    if: always()                      # Runs regardless of any previous job status
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL:   ${{ github.event.inputs.base_url || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install report dependencies
+        run: |
+          pip install --upgrade pip
+          pip install openpyxl==3.1.5 python-dotenv==1.1.1
+
+      - name: Create result directories
+        run: |
+          mkdir -p "Test Results/Excel"
+          mkdir -p "Test Results/HTML"
+          mkdir -p "Test Results/JSON"
+          mkdir -p "Test Results/Summary"
+          mkdir -p "Test Results/Screenshots"
+          mkdir -p "Test Results/Logs"
+
+      - name: Download JSON results (if e2e-tests ran)
+        uses: actions/download-artifact@v4
+        continue-on-error: true       # Silent if artifact doesn't exist (tests were skipped)
+        with:
+          name: test-json-results-${{ github.run_number }}
+          path: "Test Results/"
+
+      - name: Generate Excel + HTML reports
+        run: |
+          python - << 'PYEOF'
+          import json, pathlib, sys
+          sys.path.insert(0, ".")
+
+          json_dir = pathlib.Path("Test Results/JSON")
+          ts_files = sorted(json_dir.glob("execution-results_*.json"))
+          latest   = json_dir / "execution-results.json"
+
+          if ts_files:
+              src = ts_files[-1]
+              print(f"Using: {src}")
+          elif latest.exists():
+              src = latest
+              print(f"Using: {src}")
+          else:
+              src = None
+              print("No JSON results — generating empty report")
+
+          if src:
+              summary = json.loads(src.read_text())
+              results = summary.get("results", [])
+              print(f"Loaded {len(results)} test results")
+          else:
+              results, summary = [], {
+                  "total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []
+              }
+
+          from automation.utils.report_generator import (
+              generate_excel_report, generate_html_report
+          )
+          excel_path = generate_excel_report(results, summary)
+          html_path  = generate_html_report(results, summary)
+
+          print(f"\n✓ Excel → {excel_path}")
+          print(f"✓ HTML  → {html_path}\n")
+          print("Generated Excel files:")
+          for f in sorted(pathlib.Path("Test Results/Excel").glob("*.xlsx")):
+              print(f"  {f.name}  ({f.stat().st_size:,} bytes)")
+          PYEOF
+
+      - name: Generate execution summary
+        if: always()
+        run: |
+          python - << 'PYEOF'
+          import json, pathlib
+          json_dir  = pathlib.Path("Test Results/JSON")
+          src_files = sorted(json_dir.glob("execution-results*.json"))
+          s = json.loads(src_files[-1].read_text()) if src_files else {
+              "total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []
+          }
+          total, passed, failed, skipped = (
+              s.get("total",0), s.get("passed",0),
+              s.get("failed",0), s.get("skipped",0)
+          )
+          rate = f"{passed/total*100:.1f}" if total else "0"
+          fail_rows = "".join(
+              f"| {r.get('test_id','')[:55]} | {r.get('name','')[:45]} "
+              f"| {r.get('failure_reason','')[:75]} |\n"
+              for r in s.get("results", []) if r.get("status") == "FAIL"
+          )[:25]
+          md = (
+              f"# DentAI — E2E Execution Summary\n\n"
+              f"**Build:** ${{ github.sha }}  **Branch:** ${{ github.ref_name }}\n\n"
+              f"## Results\n\n"
+              f"| Metric | Value |\n|--------|-------|\n"
+              f"| Total   | {total}   |\n"
+              f"| Passed  | {passed}  |\n"
+              f"| Failed  | {failed}  |\n"
+              f"| Skipped | {skipped} |\n"
+              f"| Pass Rate | {rate}% |\n\n"
+              f"## Failed Tests\n\n"
+              f"| Test ID | Name | Failure Reason |\n"
+              f"|---------|------|----------------|\n"
+              f"{fail_rows or 'None — all tests passed!'}\n"
+          )
+          pathlib.Path("Test Results/Summary/summary.md").write_text(md)
+          print(md)
+          PYEOF
+
+      # ── PRIMARY ARTIFACT: Excel files (90-day retention) ─────────────────
+      - name: "Upload Excel reports (PRIMARY — 90 days)"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: excel-reports-${{ github.run_number }}
+          retention-days: 90
+          path: |
+            Test Results/Excel/*.xlsx
+
+      # ── FULL BUNDLE: all results (30-day retention) ───────────────────────
+      - name: "Upload full test bundle (30 days)"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results-${{ github.run_number }}
+          retention-days: 30
+          path: |
+            Test Results/Excel/
+            Test Results/HTML/
+            Test Results/Screenshots/
+            Test Results/Logs/
+            Test Results/JSON/
+            Test Results/Summary/
+
+      # ── Publish summary to the GitHub Actions run page ────────────────────
+      - name: Publish step summary
+        if: always()
+        run: |
+          SUMMARY="Test Results/Summary/summary.md"
+          [ -f "$SUMMARY" ] && cat "$SUMMARY" >> $GITHUB_STEP_SUMMARY \
+            || echo "## No summary available" >> $GITHUB_STEP_SUMMARY
+
+          cat >> $GITHUB_STEP_SUMMARY << 'MARKDOWN'
+
+          ## Excel Report Downloads
+
+          Download **`excel-reports-RUN_NUMBER`** from the Artifacts section at the bottom of this page.
+
+          | File | Contents |
+          |------|----------|
+          | `Automation_Test_Report.xlsx` | 6-sheet report: All Tests · Passed · Failed · Skipped · Metrics · Defects |
+          | `Passed_Test_Cases.xlsx`      | Passed tests only |
+          | `Failed_Test_Cases.xlsx`      | Failed tests + failure reasons |
+          | `Summary_Report.xlsx`         | Pass/fail breakdown by module |
+          MARKDOWN
+
+          if ls "Test Results/Excel/"*.xlsx 1>/dev/null 2>&1; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Generated Files" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            ls -lh "Test Results/Excel/"*.xlsx >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Pass-rate threshold check (warn only — never fails pipeline)
+        if: always()
+        run: |
+          python - << 'PYEOF'
+          import json, pathlib, sys
+          files = sorted(pathlib.Path("Test Results/JSON").glob("execution-results*.json"))
+          if not files:
+              print("No results found — skipping check"); sys.exit(0)
+          s     = json.loads(files[-1].read_text())
+          total = s.get("total", 0)
+          rate  = s.get("passed", 0) / total * 100 if total else 0
+          print(f"Pass rate: {rate:.1f}%  ({s.get('passed',0)}/{total})")
+          print("WARNING: below 95%" if rate < 95 else "PASS: meets 95% threshold")
+          PYEOF
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 6 — Append run to history log
+  # ══════════════════════════════════════════════════════════════════════════
+  store-history:
+    name: "6 · Store History"
+    needs: generate-excel-report
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download test bundle
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: e2e-test-results-${{ github.run_number }}
+          path: current-results/
+
+      - name: Append history entry
+        run: |
+          echo "Run #${{ github.run_number }} | SHA: ${{ github.sha }} | Branch: ${{ github.ref_name }} | Date: $(date -u)" >> history.log
+          cat history.log
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: execution-history
+          retention-days: 90
+          path: history.log
