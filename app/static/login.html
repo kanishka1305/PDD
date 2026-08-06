@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    <div class="logo">
+      <div class="logo-mark">
+        <i data-lucide="scan-face" style="width:26px;height:26px;color:#fff;"></i>
+      </div>
+      <span class="brand-name">DentAI</span>
+      <p>CBCT AI Segmentation Platform</p>
+    </div>
+
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to your clinical account</p>
+
+    <div class="alert error" id="alert" role="alert"></div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="doctor@hospital.com" autocomplete="email" required />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required />
+          <span class="pw-eye" id="eye-toggle" onclick="toggleEye('password','eye-toggle')" title="Show / hide password" aria-label="Toggle password visibility">
+            <i data-lucide="eye" id="eye-icon" style="width:16px;height:16px;"></i>
+          </span>
+        </div>
+        <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+      </div>
+
+      <button class="btn-primary" type="submit" id="btn">
+        <i data-lucide="log-in" style="width:16px;height:16px;"></i>
+        Sign In
+      </button>
+    </form>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="/signup">Create account</a>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  lucide.createIcons();
+  requireGuest();
+
+  function toggleEye(inputId, wrapperId) {
+    const input = document.getElementById(inputId);
+    const icon  = document.getElementById('eye-icon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+      input.type = 'password';
+      icon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn   = document.getElementById('btn');
+    const alert = document.getElementById('alert');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Signing in…';
+    alert.style.display = 'none';
+
+    try {
+      const data = await postForm('/login', {
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      });
+
+      if (data.success) {
+        store.set('user', { id: data.id, name: data.name, email: data.email });
+        toast('Welcome back, Dr. ' + data.name, 'success');
+        setTimeout(() => window.location.href = '/dashboard', 500);
+      } else {
+        alert.textContent = data.message || 'Login failed. Please check your credentials.';
+        alert.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="log-in" style="width:16px;height:16px;"></i> Sign In';
+        lucide.createIcons();
+      }
+    } catch {
+      alert.textContent = 'Cannot reach server. Is the backend running?';
+      alert.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="log-in" style="width:16px;height:16px;"></i> Sign In';
+      lucide.createIcons();
+    }
+  });
+</script>
+</body>
+</html>

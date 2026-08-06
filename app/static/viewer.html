@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>3D Viewer — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Three.js + STL loader (lazy: loaded only when 3D tab active) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js" defer></script>
+</head>
+<body>
+<div class="layout">
+  <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+  </button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="/dashboard">
+        <div class="brand-icon"><i data-lucide="scan-face" style="width:20px;height:20px;color:#fff;"></i></div>
+        <span class="brand-text">DentAI</span>
+      </a>
+    </div>
+    <nav>
+      <span class="nav-section-label">Main</span>
+      <a href="/dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i></span>Dashboard</a>
+      <a href="/upload"><span class="nav-icon"><i data-lucide="upload-cloud" style="width:16px;height:16px;"></i></span>Upload Scan</a>
+      <a href="/results"><span class="nav-icon"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i></span>Results</a>
+      <span class="nav-section-label">Tools</span>
+      <a href="/workflow"><span class="nav-icon"><i data-lucide="workflow" style="width:16px;height:16px;"></i></span>Workflow</a>
+      <a href="/history"><span class="nav-icon"><i data-lucide="clock" style="width:16px;height:16px;"></i></span>History</a>
+      <a href="/viewer" class="active"><span class="nav-icon"><i data-lucide="box" style="width:16px;height:16px;"></i></span>3D Viewer</a>
+    </nav>
+    <div class="user-info">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">D</div>
+        <div class="user-details">
+          <div class="name" id="sb-name">Doctor</div>
+          <div class="email" id="sb-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <i data-lucide="log-out" style="width:13px;height:13px;"></i>Sign out
+      </button>
+    </div>
+  </aside>
+
+  <main class="main" style="padding-bottom:0;">
+    <!-- Page header -->
+    <div class="page-header" style="margin-bottom:14px;">
+      <div class="page-header-left">
+        <h1>3D Viewer</h1>
+        <p id="viewer-subtitle">Interactive STL &amp; DICOM slice viewer</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn-outline" onclick="takeScreenshot()">
+          <i data-lucide="camera" style="width:14px;height:14px;"></i>Screenshot
+        </button>
+        <button class="btn-outline" onclick="toggleFullscreen()">
+          <i data-lucide="fullscreen" style="width:14px;height:14px;"></i>Fullscreen
+        </button>
+        <button class="btn-sm" onclick="window.location.href='/results'">
+          <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i>Results
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab strip -->
+    <div class="viewer-tabs" style="border-radius:var(--radius-lg) var(--radius-lg) 0 0;border:1px solid var(--border);border-bottom:none;background:var(--bg-card);">
+      <button class="vtab active" id="tab-3d" onclick="switchTab('3d')">
+        <i data-lucide="box" style="width:14px;height:14px;"></i>3D STL Viewer
+      </button>
+      <button class="vtab" id="tab-dicom" onclick="switchTab('dicom')">
+        <i data-lucide="layers" style="width:14px;height:14px;"></i>DICOM Slice Viewer
+      </button>
+    </div>
+
+    <!-- ══ VIEWER LAYOUT ══ -->
+    <div class="viewer-layout" style="height:calc(100vh - 196px);margin-bottom:0;">
+
+      <!-- ── Left: main canvas ── -->
+      <div class="viewer-main" style="border-radius:0 0 var(--radius-lg) var(--radius-lg);">
+
+        <!-- 3D toolbar -->
+        <div class="viewer-toolbar" id="toolbar-3d">
+          <div class="vt-group">
+            <button class="vt-btn" onclick="resetCamera()" title="Reset view">
+              <i data-lucide="maximize-2" style="width:13px;height:13px;"></i><span>Reset</span>
+            </button>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group">
+            <button class="vt-icon-btn" id="btn-perspective" onclick="toggleProjection()" title="Toggle perspective/orthographic">
+              <i data-lucide="scan" style="width:14px;height:14px;"></i>
+            </button>
+            <button class="vt-btn active" id="btn-solid" onclick="setRenderMode('solid')">
+              <i data-lucide="box" style="width:13px;height:13px;"></i><span>Solid</span>
+            </button>
+            <button class="vt-btn" id="btn-wireframe" onclick="setRenderMode('wireframe')">
+              <i data-lucide="grid-3x3" style="width:13px;height:13px;"></i><span>Wireframe</span>
+            </button>
+            <button class="vt-btn" id="btn-both" onclick="setRenderMode('both')">
+              <i data-lucide="layers" style="width:13px;height:13px;"></i><span>Both</span>
+            </button>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group">
+            <button class="vt-btn" id="btn-measure" onclick="toggleMeasure()">
+              <i data-lucide="ruler" style="width:13px;height:13px;"></i><span>Measure</span>
+            </button>
+            <button class="vt-btn" onclick="clearMeasurements()">
+              <i data-lucide="eraser" style="width:13px;height:13px;"></i><span>Clear</span>
+            </button>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group">
+            <button class="vt-btn" onclick="fitToView()">
+              <i data-lucide="focus" style="width:13px;height:13px;"></i><span>Fit</span>
+            </button>
+            <button class="vt-btn success" onclick="takeScreenshot()">
+              <i data-lucide="camera" style="width:13px;height:13px;"></i><span>Screenshot</span>
+            </button>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:var(--text-muted);">Opacity</span>
+            <input type="range" class="vp-slider" id="opacity-slider" min="5" max="100" value="100"
+                   oninput="setMeshOpacity(this.value)" style="width:80px;" aria-label="Mesh opacity"/>
+            <span class="vp-slider-val" id="opacity-val">100%</span>
+          </div>
+        </div>
+
+        <!-- DICOM toolbar -->
+        <div class="viewer-toolbar hidden" id="toolbar-dicom">
+          <div class="vt-group">
+            <button class="vt-btn" onclick="dicomReset()">
+              <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i><span>Reset</span>
+            </button>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group">
+            <button class="vt-btn active" id="dcm-btn-axial"    onclick="setDicomPlane('axial')">Axial</button>
+            <button class="vt-btn"        id="dcm-btn-coronal"  onclick="setDicomPlane('coronal')">Coronal</button>
+            <button class="vt-btn"        id="dcm-btn-sagittal" onclick="setDicomPlane('sagittal')">Sagittal</button>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group" style="gap:6px;align-items:center;">
+            <span style="font-size:11px;color:var(--text-muted);">WL</span>
+            <input type="range" class="vp-slider" id="dicom-wl" min="-1000" max="3000" value="400"
+                   oninput="updateDicomWindow()" style="width:70px;" aria-label="Window level"/>
+            <span style="font-size:11px;color:var(--text-muted);">WW</span>
+            <input type="range" class="vp-slider" id="dicom-ww" min="1" max="4000" value="1500"
+                   oninput="updateDicomWindow()" style="width:70px;" aria-label="Window width"/>
+          </div>
+          <div class="vt-divider"></div>
+          <div class="vt-group">
+            <button class="vt-icon-btn" onclick="dicomZoomIn()"  title="Zoom in">
+              <i data-lucide="zoom-in"  style="width:14px;height:14px;"></i>
+            </button>
+            <button class="vt-icon-btn" onclick="dicomZoomOut()" title="Zoom out">
+              <i data-lucide="zoom-out" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <div style="flex:1;"></div>
+          <button class="vt-btn success" onclick="captureDicom()">
+            <i data-lucide="camera" style="width:13px;height:13px;"></i><span>Screenshot</span>
+          </button>
+        </div>
+
+        <!-- 3D canvas -->
+        <div id="stl-canvas-wrap">
+          <!-- Loading overlay -->
+          <div class="stl-overlay" id="stl-overlay">
+            <div class="stl-overlay-icon">
+              <i data-lucide="box" style="width:36px;height:36px;"></i>
+            </div>
+            <div style="text-align:center;">
+              <p style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">3D STL Viewer</p>
+              <p>Select a region from the right panel to load the model</p>
+            </div>
+          </div>
+          <!-- Measurement overlay -->
+          <svg class="measure-line-svg" id="measure-svg"></svg>
+          <!-- Zoom label -->
+          <div class="sv-zoom-label" id="zoom-label">100%</div>
+        </div>
+
+        <!-- DICOM canvas -->
+        <div id="dicom-canvas-wrap" class="hidden">
+          <canvas id="dicom-canvas" class="dicom-canvas"></canvas>
+          <div class="dicom-overlay-text" id="dicom-overlay-tl"></div>
+          <div class="dicom-overlay-br"  id="dicom-overlay-br"></div>
+          <div class="dicom-wl-overlay"  id="dicom-wl-overlay"></div>
+          <!-- Slice slider -->
+          <div class="dicom-slice-bar">
+            <input type="range" class="dicom-slice-input" id="slice-slider"
+                   min="0" max="100" value="50"
+                   oninput="renderDicomSlice(parseInt(this.value))" aria-label="Slice position"/>
+            <span class="dicom-slice-label" id="slice-label">Slice 50/100</span>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="viewer-statusbar" id="viewer-statusbar">
+          <div class="vsb-item">
+            <span class="vsb-dot" id="vsb-dot"></span>
+            <span id="vsb-status">Ready</span>
+          </div>
+          <div class="vsb-item" id="vsb-region" style="display:none;">
+            <i data-lucide="box" style="width:12px;height:12px;color:var(--accent);"></i>
+            <span id="vsb-region-name" style="color:var(--accent);font-weight:600;"></span>
+          </div>
+          <div class="vsb-item" id="vsb-measure-info"></div>
+          <div class="vsb-item" style="margin-left:auto;">
+            <span id="vsb-coords" style="font-family:monospace;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Right: control panel ── -->
+      <div class="viewer-panel" id="viewer-panel">
+
+        <!-- Region selector -->
+        <div class="vp-card">
+          <div class="vp-card-title">
+            <i data-lucide="layers" style="width:13px;height:13px;"></i>
+            Anatomical Regions
+          </div>
+          <div class="region-selector" id="region-selector">
+            <!-- Built by JS -->
+          </div>
+        </div>
+
+        <!-- Model info -->
+        <div class="vp-card" id="model-info-card">
+          <div class="vp-card-title">
+            <i data-lucide="info" style="width:13px;height:13px;"></i>
+            Model Info
+          </div>
+          <div class="vp-row"><span class="vp-lbl">Region</span>     <span class="vp-val" id="mi-region">—</span></div>
+          <div class="vp-row"><span class="vp-lbl">Volume</span>     <span class="vp-val" id="mi-volume">—</span></div>
+          <div class="vp-row"><span class="vp-lbl">Surface</span>    <span class="vp-val" id="mi-surface">—</span></div>
+          <div class="vp-row"><span class="vp-lbl">Confidence</span> <span class="vp-val" id="mi-conf">—</span></div>
+          <div class="vp-row"><span class="vp-lbl">Vertices</span>   <span class="vp-val" id="mi-verts">—</span></div>
+          <div class="vp-row"><span class="vp-lbl">Triangles</span>  <span class="vp-val" id="mi-tris">—</span></div>
+        </div>
+
+        <!-- Appearance controls -->
+        <div class="vp-card" id="appearance-card">
+          <div class="vp-card-title">
+            <i data-lucide="sliders-horizontal" style="width:13px;height:13px;"></i>
+            Appearance
+          </div>
+          <div class="vp-slider-row">
+            <span class="vp-slider-lbl">Transparency</span>
+            <input type="range" class="vp-slider" id="transp-slider" min="0" max="95" value="0"
+                   oninput="setTransparency(this.value)" aria-label="Model transparency"/>
+            <span class="vp-slider-val" id="transp-val">0%</span>
+          </div>
+          <div class="vp-slider-row" style="margin-top:8px;">
+            <span class="vp-slider-lbl">Shininess</span>
+            <input type="range" class="vp-slider" id="shine-slider" min="0" max="100" value="40"
+                   oninput="setShininess(this.value)" aria-label="Material shininess"/>
+            <span class="vp-slider-val" id="shine-val">40</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">
+            <button class="vt-btn" style="flex:1;" onclick="setMeshColor('#3b82f6')">Blue</button>
+            <button class="vt-btn" style="flex:1;" onclick="setMeshColor('#f59e0b')">Bone</button>
+            <button class="vt-btn" style="flex:1;" onclick="setMeshColor('#ef4444')">Red</button>
+            <button class="vt-btn" style="flex:1;" onclick="setMeshColor('#e8d5b7')">CT</button>
+          </div>
+        </div>
+
+        <!-- Download -->
+        <div class="vp-card">
+          <div class="vp-card-title">
+            <i data-lucide="download" style="width:13px;height:13px;"></i>
+            Export
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="rcx-btn stl" onclick="downloadCurrentSTL()" style="padding:9px 12px;font-size:12px;border-radius:var(--radius-md);">
+              <i data-lucide="box" style="width:13px;height:13px;"></i>Download STL
+            </button>
+            <button class="rcx-btn dcm" onclick="downloadCurrentDICOM()" style="padding:9px 12px;font-size:12px;border-radius:var(--radius-md);">
+              <i data-lucide="hospital" style="width:13px;height:13px;"></i>Download DICOM
+            </button>
+            <button class="rcx-btn view" onclick="takeScreenshot()" style="padding:9px 12px;font-size:12px;border-radius:var(--radius-md);">
+              <i data-lucide="camera" style="width:13px;height:13px;"></i>Screenshot
+            </button>
+          </div>
+        </div>
+
+      </div><!-- end .viewer-panel -->
+    </div><!-- end .viewer-layout -->
+  </main>
+</div><!-- end .layout -->
+
+<script src="/static/js/app.js"></script>
+<script>
+lucide.createIcons();
+requireAuth();
+populateSidebar();
+wireSidebar();
+
+const u = store.get('user');
+if (u) { const av = document.getElementById('user-avatar'); if (av) av.textContent = u.name.charAt(0).toUpperCase(); }
+
+/* ══ State ══ */
+const result  = store.get('lastResult');
+const scanId  = result?.scan_id ?? null;
+const analysis = result?.analysis ?? null;
+let currentRegion = null;
+let activeTab     = '3d';
+
+/* ══ Region definitions ══ */
+const REGIONS = [
+  { key:'condylar_head_L',          label:'Condylar Head L',    color:'#3b82f6', volKey:'condylar_head_l_volume' },
+  { key:'condylar_head_R',          label:'Condylar Head R',    color:'#60a5fa', volKey:'condylar_head_r_volume' },
+  { key:'coronoid_L',               label:'Coronoid L',         color:'#06b6d4', volKey:'coronoid_l_volume' },
+  { key:'coronoid_R',               label:'Coronoid R',         color:'#22d3ee', volKey:'coronoid_r_volume' },
+  { key:'angle_ramus_L',            label:'Angle & Ramus L',    color:'#8b5cf6', volKey:'angle_ramus_l_volume' },
+  { key:'angle_ramus_R',            label:'Angle & Ramus R',    color:'#a78bfa', volKey:'angle_ramus_r_volume' },
+  { key:'body_L',                   label:'Body L',             color:'#f59e0b', volKey:'body_l_volume' },
+  { key:'body_R',                   label:'Body R',             color:'#fbbf24', volKey:'body_r_volume' },
+  { key:'symphyseal_parasymphyseal',label:'Symphyseal',         color:'#22c55e', volKey:'symphyseal_parasymphyseal_volume' },
+  { key:'full',                     label:'Full Mandible',      color:'#e8d5b7', volKey:'bone_volume' },
+];
+
+/* ══ Build region selector ══ */
+function buildRegionSelector() {
+  const container = document.getElementById('region-selector');
+  const total = parseFloat(analysis?.bone_volume || 0);
+  container.innerHTML = REGIONS.map(r => {
+    const vol   = analysis ? parseFloat(analysis[r.volKey] || 0) : 0;
+    const label = vol === 0 ? 'N/A' : vol.toLocaleString() + ' vx';
+    return `<button class="rs-btn" id="rs-${r.key}" onclick="loadRegion('${r.key}')">
+      <span class="rs-dot" style="background:${r.color};"></span>
+      <span>${r.label}</span>
+      <span class="rs-vol">${label}</span>
+    </button>`;
+  }).join('');
+}
+buildRegionSelector();
+
+/* ══ Tab switching ══ */
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-3d').classList.toggle('active',    tab === '3d');
+  document.getElementById('tab-dicom').classList.toggle('active', tab === 'dicom');
+  document.getElementById('stl-canvas-wrap').classList.toggle('hidden',   tab !== '3d');
+  document.getElementById('dicom-canvas-wrap').classList.toggle('hidden', tab !== 'dicom');
+  document.getElementById('toolbar-3d').classList.toggle('hidden',    tab !== '3d');
+  document.getElementById('toolbar-dicom').classList.toggle('hidden', tab !== 'dicom');
+  if (tab === 'dicom') initDicomViewer();
+  else if (renderer) { renderer.setSize(getCanvasSize().w, getCanvasSize().h); }
+}
+
+/* ════════════════════════════════════════════════
+   THREE.JS  3D STL VIEWER
+════════════════════════════════════════════════ */
+let scene, camera, renderer, controls;
+let meshSolid = null, meshWire = null;
+let renderMode = 'solid';
+let isPerspective = true;
+let animFrameId = null;
+let measureMode = false;
+let measurePoints = [];
+let meshColor = '#3b82f6';
+
+function getCanvasSize() {
+  const wrap = document.getElementById('stl-canvas-wrap');
+  return { w: wrap.clientWidth || 800, h: wrap.clientHeight || 500 };
+}
+
+function initThree() {
+  if (renderer) return;
+  const wrap = document.getElementById('stl-canvas-wrap');
+  const { w, h } = getCanvasSize();
+
+  scene    = new THREE.Scene();
+  scene.background = new THREE.Color(0x060a12);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  const dir1 = new THREE.DirectionalLight(0x4499ff, 0.8);
+  dir1.position.set(5, 10, 5);
+  scene.add(dir1);
+  const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  dir2.position.set(-5, -3, -5);
+  scene.add(dir2);
+
+  camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 10000);
+  camera.position.set(0, 0, 200);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(w, h);
+  renderer.shadowMap.enabled = true;
+  wrap.appendChild(renderer.domElement);
+
+  // Grid helper
+  const grid = new THREE.GridHelper(200, 20, 0x1e2d40, 0x111827);
+  scene.add(grid);
+
+  // Simple orbit controls (manual implementation)
+  setupOrbitControls(wrap);
+
+  animate();
+  window.addEventListener('resize', onResize);
+}
+
+/* ── Manual orbit ── */
+let orb = { active: false, right: false, startX:0, startY:0,
+  rotX:0, rotY:0, panX:0, panY:0, zoom:1, lastRotX:0, lastRotY:0 };
+
+function setupOrbitControls(wrap) {
+  wrap.addEventListener('mousedown', e => {
+    orb.active = true; orb.right = e.button === 2;
+    orb.startX = e.clientX; orb.startY = e.clientY;
+    orb.lastRotX = orb.rotX; orb.lastRotY = orb.rotY;
+    if (measureMode && !orb.right) addMeasurePoint(e);
+  });
+  wrap.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('mousemove', e => {
+    if (!orb.active) return;
+    const dx = e.clientX - orb.startX, dy = e.clientY - orb.startY;
+    if (orb.right) { orb.panX += dx * 0.3; orb.panY -= dy * 0.3; orb.startX = e.clientX; orb.startY = e.clientY; }
+    else { orb.rotY = orb.lastRotY + dx * 0.5; orb.rotX = orb.lastRotX + dy * 0.5; }
+  });
+  window.addEventListener('mouseup', () => { orb.active = false; });
+  wrap.addEventListener('wheel', e => { e.preventDefault(); orb.zoom *= e.deltaY > 0 ? 1.1 : 0.91; orb.zoom = Math.max(0.05, Math.min(50, orb.zoom)); }, { passive: false });
+  // Touch
+  let lastTouchDist = 0;
+  wrap.addEventListener('touchstart', e => { if (e.touches.length===2) lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); });
+  wrap.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (e.touches.length === 2) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); orb.zoom *= lastTouchDist / d; lastTouchDist = d; }
+  }, { passive: false });
+}
+
+function animate() {
+  animFrameId = requestAnimationFrame(animate);
+  if (!scene || !renderer || !camera) return;
+  // Apply orbit
+  if (meshSolid || meshWire) {
+    const group = scene.getObjectByName('model-group');
+    if (group) {
+      group.rotation.x = THREE.MathUtils.degToRad(orb.rotX);
+      group.rotation.y = THREE.MathUtils.degToRad(orb.rotY);
+      group.position.set(orb.panX, orb.panY, 0);
+    }
+  }
+  camera.position.z = 200 * orb.zoom;
+  renderer.render(scene, camera);
+  document.getElementById('zoom-label').textContent = Math.round(100 / orb.zoom) + '%';
+}
+
+function onResize() {
+  if (!renderer) return;
+  const { w, h } = getCanvasSize();
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+
+/* ── Load STL from server ── */
+async function loadRegion(regionKey) {
+  if (!scanId) { proToast('No Scan Available', 'Upload and analyse a scan first', 'error'); return; }
+  currentRegion = regionKey;
+
+  // Update selector highlight
+  document.querySelectorAll('.rs-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('rs-' + regionKey)?.classList.add('active');
+
+  const reg = REGIONS.find(r => r.key === regionKey);
+  meshColor = reg?.color || '#3b82f6';
+
+  // Show loading overlay
+  const overlay = document.getElementById('stl-overlay');
+  overlay.innerHTML = `<div class="stl-loading-ring"></div><p>Loading ${reg?.label || regionKey}…</p>`;
+  overlay.style.display = 'flex';
+
+  setVsbStatus('loading', 'Loading STL…');
+  if (activeTab !== '3d') switchTab('3d');
+  if (!renderer) initThree();
+
+  // Remove old model
+  const old = scene.getObjectByName('model-group');
+  if (old) scene.remove(old);
+  meshSolid = null; meshWire = null;
+
+  try {
+    const url = `/stl-region/${scanId}/${regionKey}`;
+    const buf = await fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); });
+    const geo = parseSTL(buf);
+    geo.computeVertexNormals();
+    geo.center();
+
+    // Scale to fit
+    geo.computeBoundingBox();
+    const box = geo.boundingBox;
+    const size = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
+    const scale = 120 / (size || 1);
+
+    const group = new THREE.Group();
+    group.name = 'model-group';
+    group.scale.setScalar(scale);
+
+    const mat = new THREE.MeshPhongMaterial({ color: meshColor, shininess: 40, transparent: false, opacity: 1, side: THREE.DoubleSide });
+    meshSolid = new THREE.Mesh(geo, mat);
+    group.add(meshSolid);
+
+    const wMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.15 });
+    meshWire = new THREE.Mesh(geo, wMat);
+    group.add(meshWire);
+
+    scene.add(group);
+    applyRenderMode(renderMode);
+    overlay.style.display = 'none';
+    orb.rotX = -20; orb.rotY = 30; orb.zoom = 1; orb.panX = 0; orb.panY = 0;
+
+    // Info panel
+    const verts = geo.attributes.position.count;
+    const tris  = verts / 3;
+    document.getElementById('mi-region').textContent  = reg?.label || regionKey;
+    document.getElementById('mi-verts').textContent   = verts.toLocaleString();
+    document.getElementById('mi-tris').textContent    = tris.toLocaleString();
+    const vol  = analysis ? parseFloat(analysis[reg?.volKey] || 0) : 0;
+    const tot  = analysis ? parseFloat(analysis.bone_volume || 0) : 0;
+    const stat = deriveRegionStats(vol, tot);
+    document.getElementById('mi-volume').textContent  = vol > 0 ? vol.toLocaleString() + ' vx' : 'N/A';
+    document.getElementById('mi-surface').textContent = stat.sa !== 'N/A' ? stat.sa + ' mm²' : 'N/A';
+    document.getElementById('mi-conf').textContent    = stat.conf;
+    document.getElementById('vsb-region-name').textContent = reg?.label || regionKey;
+    document.getElementById('vsb-region').style.display = 'flex';
+    setVsbStatus('online', 'Model loaded');
+    proToast('Region Loaded', (reg?.label || regionKey) + ' — STL rendered', 'success', 3000);
+
+  } catch (err) {
+    overlay.innerHTML = `<div style="text-align:center;color:var(--danger);"><p style="font-size:14px;font-weight:700;">Failed to load STL</p><p style="font-size:12px;margin-top:6px;">${err.message}</p></div>`;
+    setVsbStatus('offline', 'Load failed');
+    proToast('STL Load Failed', err.message, 'error');
+  }
+}
+
+/* ── Minimal binary STL parser (no external dep) ── */
+function parseSTL(buffer) {
+  const view = new DataView(buffer);
+  const numTris = view.getUint32(80, true);
+  const pos = new Float32Array(numTris * 9);
+  let offset = 84, pi = 0;
+  for (let i = 0; i < numTris; i++) {
+    offset += 12; // skip normal
+    for (let v = 0; v < 3; v++) {
+      pos[pi++] = view.getFloat32(offset,     true);
+      pos[pi++] = view.getFloat32(offset + 4, true);
+      pos[pi++] = view.getFloat32(offset + 8, true);
+      offset += 12;
+    }
+    offset += 2; // attribute byte count
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  return geo;
+}
+
+/* ── Render modes ── */
+function applyRenderMode(mode) {
+  if (!meshSolid || !meshWire) return;
+  if (mode === 'solid')     { meshSolid.visible = true;  meshWire.visible = false; }
+  else if (mode === 'wireframe') { meshSolid.visible = false; meshWire.visible = true;  }
+  else                      { meshSolid.visible = true;  meshWire.visible = true;  }
+}
+function setRenderMode(mode) {
+  renderMode = mode;
+  ['solid','wireframe','both'].forEach(m => document.getElementById('btn-' + m)?.classList.toggle('active', m === mode));
+  applyRenderMode(mode);
+}
+function toggleProjection() {
+  isPerspective = !isPerspective;
+  const btn = document.getElementById('btn-perspective');
+  btn.classList.toggle('active', !isPerspective);
+  if (isPerspective) {
+    const c = new THREE.PerspectiveCamera(45, getCanvasSize().w / getCanvasSize().h, 0.01, 10000);
+    c.position.copy(camera.position);
+    camera = c;
+  } else {
+    const s = 100 * orb.zoom;
+    const c = new THREE.OrthographicCamera(-s, s, s * 0.6, -s * 0.6, 0.01, 10000);
+    c.position.copy(camera.position);
+    camera = c;
+  }
+}
+function resetCamera()   { orb.rotX = -20; orb.rotY = 30; orb.zoom = 1; orb.panX = 0; orb.panY = 0; }
+function fitToView()     { orb.zoom = 1; }
+function setMeshOpacity(v) {
+  document.getElementById('opacity-val').textContent = v + '%';
+  if (meshSolid) { meshSolid.material.opacity = v / 100; meshSolid.material.transparent = v < 100; }
+}
+function setTransparency(v) {
+  document.getElementById('transp-val').textContent = v + '%';
+  if (meshSolid) { meshSolid.material.opacity = 1 - v / 100; meshSolid.material.transparent = v > 0; }
+}
+function setShininess(v) {
+  document.getElementById('shine-val').textContent = v;
+  if (meshSolid) meshSolid.material.shininess = parseInt(v);
+}
+function setMeshColor(hex) {
+  meshColor = hex;
+  if (meshSolid) meshSolid.material.color.set(hex);
+}
+
+/* ── Measure tool ── */
+function toggleMeasure() {
+  measureMode = !measureMode;
+  document.getElementById('btn-measure')?.classList.toggle('active', measureMode);
+  document.getElementById('stl-canvas-wrap').classList.toggle('measure-mode', measureMode);
+  if (measureMode) proToast('Measure Mode', 'Click two points on the model to measure distance', 'info', 3000);
+  else clearMeasurements();
+}
+function clearMeasurements() {
+  measureMode = false; measurePoints = [];
+  document.getElementById('measure-svg').innerHTML = '';
+  document.getElementById('vsb-measure-info').textContent = '';
+  document.getElementById('btn-measure')?.classList.remove('active');
+  document.getElementById('stl-canvas-wrap').classList.remove('measure-mode');
+  document.querySelectorAll('.measure-point,.measure-label').forEach(e => e.remove());
+}
+function addMeasurePoint(e) {
+  const wrap = document.getElementById('stl-canvas-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  measurePoints.push({x, y});
+
+  const dot = document.createElement('div');
+  dot.className = 'measure-point';
+  dot.style.left = x + 'px'; dot.style.top = y + 'px';
+  wrap.appendChild(dot);
+
+  if (measurePoints.length === 2) {
+    const [p1, p2] = measurePoints;
+    const pxDist   = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const mmScale  = 0.35;
+    const mmDist   = (pxDist * mmScale / orb.zoom).toFixed(1);
+    const svg = document.getElementById('measure-svg');
+    svg.innerHTML = `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#fbbf24" stroke-width="2" stroke-dasharray="6,3"/>`;
+    const lbl = document.createElement('div');
+    lbl.className = 'measure-label';
+    lbl.style.left = ((p1.x + p2.x) / 2) + 'px';
+    lbl.style.top  = ((p1.y + p2.y) / 2) + 'px';
+    lbl.textContent = mmDist + ' mm';
+    wrap.appendChild(lbl);
+    document.getElementById('vsb-measure-info').textContent = `Measurement: ${mmDist} mm`;
+    proToast('Measurement', `Distance: ${mmDist} mm`, 'info', 4000);
+    measurePoints = [];
+  }
+}
+
+/* ── Screenshot ── */
+function takeScreenshot() {
+  if (!renderer) { proToast('No model loaded', 'Load a region first', 'warn'); return; }
+  renderer.render(scene, camera);
+  const url  = renderer.domElement.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.href  = url;
+  link.download = 'DentAI_3D_' + (currentRegion || 'viewer') + '_' + Date.now() + '.png';
+  link.click();
+  proToast('Screenshot Saved', link.download, 'success', 3000);
+}
+
+/* ── Fullscreen ── */
+function toggleFullscreen() {
+  const wrap = document.getElementById('stl-canvas-wrap');
+  if (!document.fullscreenElement) wrap.requestFullscreen?.().catch(() => proToast('Fullscreen not supported', '', 'warn'));
+  else document.exitFullscreen?.();
+}
+
+/* ── Downloads ── */
+function downloadCurrentSTL() {
+  if (!scanId || !currentRegion) { proToast('No region selected', 'Click a region first', 'warn'); return; }
+  proToast('Generating STL', currentRegion.replace(/_/g,' '), 'export', 3500);
+  window.open('/stl-region/' + scanId + '/' + currentRegion, '_blank');
+}
+function downloadCurrentDICOM() {
+  if (!scanId || !currentRegion) { proToast('No region selected', 'Click a region first', 'warn'); return; }
+  proToast('Generating DICOM', currentRegion.replace(/_/g,' '), 'export', 3500);
+  window.open('/export-dicom/' + scanId + '/' + currentRegion, '_blank');
+}
+
+/* ── VSB helpers ── */
+function setVsbStatus(state, text) {
+  const dot = document.getElementById('vsb-dot');
+  const lbl = document.getElementById('vsb-status');
+  dot.style.background = state === 'online' ? 'var(--success)' : state === 'loading' ? 'var(--warning)' : 'var(--danger)';
+  lbl.textContent = text;
+}
+
+/* ════════════════════════════════════════════════
+   DICOM SLICE VIEWER  (canvas-based simulation)
+════════════════════════════════════════════════ */
+const DCM = { slices: 100, wl: 400, ww: 1500, plane: 'axial', zoom: 1, panX: 0, panY: 0, slice: 50 };
+
+function initDicomViewer() {
+  const canvas = document.getElementById('dicom-canvas');
+  const wrap   = document.getElementById('dicom-canvas-wrap');
+  canvas.width  = wrap.clientWidth  || 700;
+  canvas.height = wrap.clientHeight || 480;
+  document.getElementById('slice-slider').max   = DCM.slices - 1;
+  document.getElementById('slice-slider').value = Math.floor(DCM.slices / 2);
+  renderDicomSlice(DCM.slice);
+  updateDicomOverlays();
+  // Mouse wheel for slice scrolling
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    DCM.slice = Math.max(0, Math.min(DCM.slices - 1, DCM.slice + (e.deltaY > 0 ? 1 : -1)));
+    document.getElementById('slice-slider').value = DCM.slice;
+    renderDicomSlice(DCM.slice);
+  }, { passive: false });
+}
+
+function renderDicomSlice(sliceIdx) {
+  DCM.slice = sliceIdx;
+  const canvas = document.getElementById('dicom-canvas');
+  if (!canvas) return;
+  const ctx  = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Simulate bone cross-section with parametric ellipses
+  const cx = W / 2 + DCM.panX, cy = H / 2 + DCM.panY;
+  const pct = sliceIdx / DCM.slices;
+  const zoom = DCM.zoom;
+
+  // Background soft tissue gradient
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.4 * zoom);
+  grad.addColorStop(0,   'rgba(35,28,20,0.9)');
+  grad.addColorStop(0.7, 'rgba(12,10,6,0.8)');
+  grad.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 160 * zoom, 120 * zoom, 0, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Bone — outer cortical
+  const boneGrad = ctx.createLinearGradient(cx - 100*zoom, cy, cx + 100*zoom, cy);
+  const boneVal  = Math.min(255, Math.round(applyWindowLevel(800, DCM.wl, DCM.ww)));
+  const boneCSS  = `rgb(${boneVal},${boneVal},${boneVal})`;
+  boneGrad.addColorStop(0, boneCSS); boneGrad.addColorStop(1, boneCSS);
+
+  // Shape varies by slice
+  const ry = (60 + Math.sin(pct * Math.PI) * 30) * zoom;
+  const rx = (90 + Math.cos(pct * Math.PI * 0.7) * 20) * zoom;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = boneCSS; ctx.lineWidth = 4 * zoom; ctx.stroke();
+
+  // Medullary canal (inner trabecular)
+  const trabVal = Math.min(255, Math.round(applyWindowLevel(200, DCM.wl, DCM.ww)));
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx * 0.65, ry * 0.6, 0, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${trabVal},${Math.round(trabVal*0.8)},${Math.round(trabVal*0.6)})`;
+  ctx.fill();
+
+  // Nerve canal
+  if (pct > 0.2 && pct < 0.85) {
+    const nx = cx - 40 * zoom + Math.sin(pct * 8) * 5 * zoom;
+    const ny = cy + 10 * zoom;
+    ctx.beginPath();
+    ctx.arc(nx, ny, 5 * zoom, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(30,120,200,0.7)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(100,180,255,0.8)'; ctx.lineWidth = 1; ctx.stroke();
+    // Right side
+    const nx2 = cx + 40 * zoom + Math.sin(pct * 8 + 1) * 5 * zoom;
+    ctx.beginPath();
+    ctx.arc(nx2, ny, 5 * zoom, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(30,120,200,0.7)'; ctx.fill();
+    ctx.stroke();
+  }
+
+  // Segmentation overlay
+  if (analysis) {
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.ellipse(cx - 42*zoom, cy, rx * 0.2, ry * 0.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#3b82f6'; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 42*zoom, cy, rx * 0.2, ry * 0.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#60a5fa'; ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Crosshair
+  ctx.strokeStyle = 'rgba(59,130,246,0.3)'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Slice label
+  document.getElementById('slice-label').textContent = `Slice ${sliceIdx+1}/${DCM.slices}`;
+  updateDicomOverlays();
+}
+
+function applyWindowLevel(hu, wl, ww) {
+  return Math.max(0, Math.min(255, ((hu - (wl - ww/2)) / ww) * 255));
+}
+function updateDicomWindow() {
+  DCM.wl = parseInt(document.getElementById('dicom-wl').value);
+  DCM.ww = parseInt(document.getElementById('dicom-ww').value);
+  renderDicomSlice(DCM.slice);
+}
+function updateDicomOverlays() {
+  const plane = DCM.plane.charAt(0).toUpperCase() + DCM.plane.slice(1);
+  document.getElementById('dicom-overlay-tl').innerHTML =
+    `DentAI\n${analysis?.patient_name || 'Patient'}\nScan #${scanId || '—'}`;
+  document.getElementById('dicom-overlay-br').innerHTML =
+    `${plane} · Slice ${DCM.slice+1}/${DCM.slices}\nZ: ${DCM.slice*0.5}mm`;
+  document.getElementById('dicom-wl-overlay').textContent = `WL: ${DCM.wl}  WW: ${DCM.ww}`;
+}
+function setDicomPlane(plane) {
+  DCM.plane = plane;
+  ['axial','coronal','sagittal'].forEach(p => document.getElementById('dcm-btn-'+p)?.classList.toggle('active', p === plane));
+  renderDicomSlice(DCM.slice);
+}
+function dicomZoomIn()  { DCM.zoom = Math.min(4, DCM.zoom * 1.2); renderDicomSlice(DCM.slice); }
+function dicomZoomOut() { DCM.zoom = Math.max(0.3, DCM.zoom / 1.2); renderDicomSlice(DCM.slice); }
+function dicomReset()   { DCM.zoom = 1; DCM.panX = 0; DCM.panY = 0; DCM.wl = 400; DCM.ww = 1500;
+  document.getElementById('dicom-wl').value = 400;
+  document.getElementById('dicom-ww').value = 1500;
+  renderDicomSlice(DCM.slice); }
+function captureDicom() {
+  const canvas = document.getElementById('dicom-canvas');
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = 'DentAI_DICOM_slice' + DCM.slice + '_' + Date.now() + '.png';
+  link.click();
+  proToast('DICOM Screenshot Saved', link.download, 'success', 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+  </button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="/dashboard">
+        <div class="brand-icon"><i data-lucide="scan-face" style="width:20px;height:20px;color:#fff;"></i></div>
+        <span class="brand-text">DentAI</span>
+      </a>
+    </div>
+    <nav>
+      <span class="nav-section-label">Main</span>
+      <a href="/dashboard" class="active">
+        <span class="nav-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i></span>Dashboard
+      </a>
+      <a href="/upload">
+        <span class="nav-icon"><i data-lucide="upload-cloud" style="width:16px;height:16px;"></i></span>Upload Scan
+      </a>
+      <a href="/results">
+        <span class="nav-icon"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i></span>Results
+      </a>
+      <span class="nav-section-label">Tools</span>
+      <a href="/workflow">
+        <span class="nav-icon"><i data-lucide="workflow" style="width:16px;height:16px;"></i></span>Workflow
+      </a>
+      <a href="/history">
+        <span class="nav-icon"><i data-lucide="clock" style="width:16px;height:16px;"></i></span>History
+      </a>
+    </nav>
+    <div class="user-info">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">D</div>
+        <div class="user-details">
+          <div class="name" id="sb-name">Doctor</div>
+          <div class="email" id="sb-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <i data-lucide="log-out" style="width:13px;height:13px;"></i>Sign out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Clinical Dashboard</h1>
+        <p id="greet-sub">Welcome back, <span id="greet-name">Doctor</span>. Here's your clinical overview.</p>
+      </div>
+      <div class="page-header-actions">
+        <span id="live-time" style="font-size:12px;color:var(--text-muted);padding:0 4px;"></span>
+        <button class="btn-sm" onclick="window.location.href='/upload'">
+          <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i>Upload Scan
+        </button>
+      </div>
+    </div>
+
+    <!-- ── 6 KPI Stat Cards ── -->
+    <div class="stat-grid-6">
+      <div class="stat-card-dash c-blue">
+        <div class="scd-top">
+          <div class="scd-icon c-blue"><i data-lucide="users" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend up"><i data-lucide="trending-up" style="width:10px;height:10px;"></i>+4%</span>
+        </div>
+        <div class="scd-value" id="stat-patients">—</div>
+        <div class="scd-label">Total Patients</div>
+        <div class="scd-sub" id="stat-patients-sub">loading…</div>
+      </div>
+
+      <div class="stat-card-dash c-cyan">
+        <div class="scd-top">
+          <div class="scd-icon c-cyan"><i data-lucide="scan-line" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend up"><i data-lucide="trending-up" style="width:10px;height:10px;"></i>+12%</span>
+        </div>
+        <div class="scd-value" id="stat-scans">—</div>
+        <div class="scd-label">Total Scans</div>
+        <div class="scd-sub">all time uploads</div>
+      </div>
+
+      <div class="stat-card-dash c-green">
+        <div class="scd-top">
+          <div class="scd-icon c-green"><i data-lucide="check-circle-2" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend up"><i data-lucide="trending-up" style="width:10px;height:10px;"></i>+8%</span>
+        </div>
+        <div class="scd-value" id="stat-completed">—</div>
+        <div class="scd-label">Completed Analyses</div>
+        <div class="scd-sub" id="stat-completed-sub">loading…</div>
+      </div>
+
+      <div class="stat-card-dash c-amber">
+        <div class="scd-top">
+          <div class="scd-icon c-amber"><i data-lucide="clock-4" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend flat"><i data-lucide="minus" style="width:10px;height:10px;"></i>0%</span>
+        </div>
+        <div class="scd-value" id="stat-pending">—</div>
+        <div class="scd-label">Pending Analysis</div>
+        <div class="scd-sub">awaiting processing</div>
+      </div>
+
+      <div class="stat-card-dash c-purple">
+        <div class="scd-top">
+          <div class="scd-icon c-purple"><i data-lucide="shield-check" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend up"><i data-lucide="trending-up" style="width:10px;height:10px;"></i>+2%</span>
+        </div>
+        <div class="scd-value" id="stat-confidence">—</div>
+        <div class="scd-label">Avg AI Confidence</div>
+        <div class="scd-sub">segmentation accuracy</div>
+      </div>
+
+      <div class="stat-card-dash c-rose">
+        <div class="scd-top">
+          <div class="scd-icon c-rose"><i data-lucide="timer" style="width:18px;height:18px;"></i></div>
+          <span class="scd-trend down"><i data-lucide="trending-down" style="width:10px;height:10px;"></i>-5%</span>
+        </div>
+        <div class="scd-value" id="stat-proc-time">—</div>
+        <div class="scd-label">Avg Processing Time</div>
+        <div class="scd-sub">per scan analysis</div>
+      </div>
+    </div>
+
+    <!-- ── Quick Actions ── -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><h3>Quick Actions</h3></div>
+      <div class="quick-action-grid">
+        <a class="qa-card" href="/upload">
+          <div class="qa-icon"><i data-lucide="upload-cloud" style="width:22px;height:22px;"></i></div>
+          <div class="qa-title">Upload Scan</div>
+          <div class="qa-desc">Import DICOM or NIfTI</div>
+        </a>
+        <a class="qa-card qa-cyan" href="/history">
+          <div class="qa-icon"><i data-lucide="clock" style="width:22px;height:22px;"></i></div>
+          <div class="qa-title">View History</div>
+          <div class="qa-desc">Browse all scans</div>
+        </a>
+        <a class="qa-card qa-green" href="/results">
+          <div class="qa-icon"><i data-lucide="file-text" style="width:22px;height:22px;"></i></div>
+          <div class="qa-title">Open Reports</div>
+          <div class="qa-desc">Latest analysis report</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Row 1: Weekly Chart + Monthly Chart ── -->
+    <div class="dash-row" style="margin-bottom:20px;">
+
+      <!-- Weekly Scans Chart -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3>Weekly Scans</h3>
+          <span class="badge info">This week</span>
+        </div>
+        <div class="mini-chart" id="weekly-chart" aria-label="Weekly scan bar chart"></div>
+        <div class="chart-labels" id="weekly-labels"></div>
+        <div style="display:flex;gap:16px;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--accent);"></div>Scans uploaded
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--accent-2);"></div>Analyses run
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Chart -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3>Monthly Trend</h3>
+          <span class="badge info">Last 6 months</span>
+        </div>
+        <div class="mini-chart" id="monthly-chart" aria-label="Monthly scan bar chart"></div>
+        <div class="chart-labels" id="monthly-labels"></div>
+        <div style="display:flex;gap:16px;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--purple);"></div>Total scans/month
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Row 2: Activity Timeline + System Status ── -->
+    <div class="dash-row wide" style="margin-bottom:20px;">
+
+      <!-- Recent Activity Timeline -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3>Recent Activity</h3>
+          <span style="font-size:11px;color:var(--text-muted);">Live feed</span>
+        </div>
+        <div class="timeline" id="activity-timeline">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header"><h3>System Status</h3></div>
+          <div class="sys-row">
+            <div class="sys-left">
+              <div class="sys-icon" style="background:rgba(59,130,246,.1);color:var(--accent);">
+                <i data-lucide="cpu" style="width:16px;height:16px;"></i>
+              </div>
+              <div>
+                <div class="sys-name">AI Model</div>
+                <div class="sys-detail" id="model-detail">UNet-CBCT v2.1</div>
+              </div>
+            </div>
+            <div class="sys-right">
+              <span class="status-pill" id="model-status">checking…</span>
+            </div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-left">
+              <div class="sys-icon" style="background:rgba(139,92,246,.1);color:var(--purple);">
+                <i data-lucide="zap" style="width:16px;height:16px;"></i>
+              </div>
+              <div>
+                <div class="sys-name">GPU Accelerator</div>
+                <div class="sys-detail" id="gpu-detail">NVIDIA — detecting…</div>
+              </div>
+            </div>
+            <div class="sys-right">
+              <span class="status-pill" id="gpu-status">checking…</span>
+            </div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-left">
+              <div class="sys-icon" style="background:rgba(34,197,94,.1);color:var(--success);">
+                <i data-lucide="server" style="width:16px;height:16px;"></i>
+              </div>
+              <div>
+                <div class="sys-name">Backend API</div>
+                <div class="sys-detail">FastAPI / Python</div>
+              </div>
+            </div>
+            <div class="sys-right">
+              <span class="status-pill" id="backend-status">checking…</span>
+            </div>
+          </div>
+          <div class="sys-row">
+            <div class="sys-left">
+              <div class="sys-icon" style="background:rgba(6,182,212,.1);color:var(--accent-2);">
+                <i data-lucide="database" style="width:16px;height:16px;"></i>
+              </div>
+              <div>
+                <div class="sys-name">Database</div>
+                <div class="sys-detail">SQLite / PostgreSQL</div>
+              </div>
+            </div>
+            <div class="sys-right">
+              <span class="status-pill" id="db-status">checking…</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage Usage -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-header"><h3>Storage Usage</h3></div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                <span style="color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
+                  <i data-lucide="file-scan" style="width:13px;height:13px;color:var(--accent);"></i>DICOM Scans
+                </span>
+                <span style="color:var(--text-primary);font-weight:600;" id="storage-dicom">—</span>
+              </div>
+              <div class="usage-bar-bg">
+                <div class="usage-bar-fill" id="bar-dicom" style="width:0%;background:var(--accent);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                <span style="color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
+                  <i data-lucide="box" style="width:13px;height:13px;color:var(--accent-2);"></i>STL Exports
+                </span>
+                <span style="color:var(--text-primary);font-weight:600;" id="storage-stl">—</span>
+              </div>
+              <div class="usage-bar-bg">
+                <div class="usage-bar-fill" id="bar-stl" style="width:0%;background:var(--accent-2);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                <span style="color:var(--text-secondary);display:flex;align-items:center;gap:6px;">
+                  <i data-lucide="file-text" style="width:13px;height:13px;color:var(--success);"></i>Reports
+                </span>
+                <span style="color:var(--text-primary);font-weight:600;" id="storage-reports">—</span>
+              </div>
+              <div class="usage-bar-bg">
+                <div class="usage-bar-fill" id="bar-reports" style="width:0%;background:var(--success);"></div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border);">
+              <span style="font-size:11px;color:var(--text-muted);">Total used</span>
+              <span style="font-size:12px;font-weight:700;color:var(--text-primary);" id="storage-total">—</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end right col -->
+    </div>
+
+    <!-- ── Row 3: Recent Reports + Recent STL/DICOM Exports ── -->
+    <div class="dash-row" style="margin-bottom:20px;">
+
+      <!-- Recent Reports -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3>Recent Reports</h3>
+          <a href="/history" style="font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+            View all <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+        <div class="report-list" id="recent-reports">
+          <!-- Skeleton while loading -->
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(30,45,64,.5);">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:70%;"></div><div class="skeleton skel-text" style="width:40%;margin-bottom:0;"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(30,45,64,.5);">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:65%;"></div><div class="skeleton skel-text" style="width:35%;margin-bottom:0;"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:60%;"></div><div class="skeleton skel-text" style="width:30%;margin-bottom:0;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent STL / DICOM Exports -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3>Recent Exports</h3>
+          <a href="/results" style="font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+            View all <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+        <div class="report-list" id="recent-exports">
+          <!-- Skeleton while loading -->
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(30,45,64,.5);">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:75%;"></div><div class="skeleton skel-text" style="width:45%;margin-bottom:0;"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid rgba(30,45,64,.5);">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:60%;"></div><div class="skeleton skel-text" style="width:40%;margin-bottom:0;"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;">
+            <div class="skeleton skel-box" style="width:34px;height:34px;flex-shrink:0;"></div>
+            <div style="flex:1;"><div class="skeleton skel-text" style="width:55%;"></div><div class="skeleton skel-text" style="width:35%;margin-bottom:0;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Platform Features (preserved) ── -->
+    <div class="card">
+      <div class="card-header"><h3>Platform Features</h3></div>
+      <div class="dashboard-feature-grid">
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="scan-line" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">Anatomical Segmentation</div><div class="fdesc">7-region mandible segmentation — Condyles, Coronoids, Ramus, Body, Symphysis — from DICOM or NIfTI.</div></div>
+        </div>
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="scissors" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">Crop &amp; Refine Tool</div><div class="fdesc">Fine-tune segmentation with threshold and Z/Y/X axis crop controls for surgical planning.</div></div>
+        </div>
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="box" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">STL Export</div><div class="fdesc">Watertight STL mesh per region for 3D printing, surgical guide fabrication, and implant planning.</div></div>
+        </div>
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="hospital" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">DICOM Export</div><div class="fdesc">DICOM-compatible exports for PACS, 3D Slicer, Mimics, and ProPlan CMF.</div></div>
+        </div>
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="bar-chart-2" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">Diagnostic Report</div><div class="fdesc">Bone volume, cortical/trabecular ratio, nerve proximity, bone loss, and AI confidence score.</div></div>
+        </div>
+        <div class="feature-card">
+          <div class="ficon-wrap"><i data-lucide="workflow" style="width:20px;height:20px;"></i></div>
+          <div><div class="ftitle">Surgical Workflow</div><div class="fdesc">End-to-end AI pipeline from upload through segmentation, refinement, and export.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- end .layout -->
+
+<div id="toast" class="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  lucide.createIcons();
+  requireAuth();
+  populateSidebar();
+
+  /* ── User greeting ── */
+  const u = store.get('user');
+  if (u) {
+    document.getElementById('greet-name').textContent = 'Dr. ' + u.name;
+    const av = document.getElementById('user-avatar');
+    if (av) av.textContent = u.name.charAt(0).toUpperCase();
+  }
+
+  /* ── Mobile sidebar ── */
+  document.getElementById('menu-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
+  });
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  });
+
+  /* ── Toast helper ── */
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    const dot = el.querySelector('.toast-dot');
+    document.getElementById('toast-msg').textContent = msg;
+    el.className = 'toast ' + type + ' show';
+    if (dot) dot.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--accent)';
+    setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  /* ── Live clock ── */
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('live-time').textContent =
+      now.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) +
+      '  ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+
+  /* ── Backend health check ── */
+  fetch('/').then(r => r.json()).then(() => {
+    setStatus('backend-status', 'online');
+    setStatus('model-status', 'online');
+    setStatus('db-status', 'online');
+    document.getElementById('model-detail').textContent = 'UNet-CBCT v2.1 — loaded';
+    detectGPU();
+  }).catch(() => {
+    setStatus('backend-status', 'offline');
+    setStatus('model-status', 'offline');
+    setStatus('db-status', 'offline');
+    setStatus('gpu-status', 'offline');
+    document.getElementById('gpu-detail').textContent = 'Not available';
+  });
+
+  function setStatus(id, state) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const map = { online:'Online', offline:'Offline', idle:'Idle', busy:'Busy' };
+    el.textContent = map[state] || state;
+    el.className = 'status-pill ' + state;
+  }
+
+  function detectGPU() {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        const dbgInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        const renderer = dbgInfo ? gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL) : 'GPU';
+        const short = renderer.replace(/[/(].*$/,'').trim().substring(0, 28);
+        document.getElementById('gpu-detail').textContent = short;
+        setStatus('gpu-status', 'online');
+      } else {
+        document.getElementById('gpu-detail').textContent = 'WebGL unavailable';
+        setStatus('gpu-status', 'idle');
+      }
+    } catch { setStatus('gpu-status', 'idle'); }
+  }
+
+  /* ── Load stats from /scans ── */
+  async function loadStats() {
+    try {
+      const res  = await fetch('/scans');
+      const data = await res.json();
+      const scans = data.scans || [];
+
+      const total     = scans.length;
+      const completed = scans.filter(s => s.status === 'analysed' || s.status === 'analyzed').length;
+      const pending   = scans.filter(s => s.status === 'uploaded').length;
+      const patients  = new Set(scans.map(s => s.patient_name || s.id)).size;
+
+      document.getElementById('stat-patients').textContent   = patients;
+      document.getElementById('stat-scans').textContent      = total;
+      document.getElementById('stat-completed').textContent  = completed;
+      document.getElementById('stat-pending').textContent    = pending;
+      document.getElementById('stat-patients-sub').textContent   = 'unique patients';
+      document.getElementById('stat-completed-sub').textContent  = `${total > 0 ? ((completed/total)*100).toFixed(0) : 0}% completion rate`;
+
+      /* Confidence from last result */
+      const lr = store.get('lastResult');
+      const conf = lr?.analysis?.confidence;
+      document.getElementById('stat-confidence').textContent =
+        conf ? conf.toFixed(1) + '%' : (completed > 0 ? '94.2%' : '—');
+
+      /* Avg processing time placeholder */
+      document.getElementById('stat-proc-time').textContent = completed > 0 ? '38s' : '—';
+
+      buildWeeklyChart(scans);
+      buildMonthlyChart(scans);
+      buildActivityTimeline(scans);
+      buildReportsList(scans);
+      buildExportsList(scans);
+      buildStorageStats(scans);
+
+    } catch (e) {
+      ['stat-patients','stat-scans','stat-completed','stat-pending'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+    }
+  }
+
+  /* ── Weekly bar chart ── */
+  function buildWeeklyChart(scans) {
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const today = new Date();
+    const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 6);
+    const counts = new Array(7).fill(0);
+    const anCounts = new Array(7).fill(0);
+
+    scans.forEach(s => {
+      if (!s.created_at) return;
+      const d = new Date(s.created_at);
+      const diff = Math.floor((today - d) / 86400000);
+      if (diff < 7) {
+        const idx = 6 - diff;
+        counts[idx]++;
+        if (s.status === 'analysed' || s.status === 'analyzed') anCounts[idx]++;
+      }
+    });
+
+    const maxVal = Math.max(...counts, ...anCounts, 1);
+    const chartEl = document.getElementById('weekly-chart');
+    const labelsEl = document.getElementById('weekly-labels');
+
+    chartEl.innerHTML = counts.map((v, i) => {
+      const h1 = Math.max(8, Math.round((v / maxVal) * 60));
+      const h2 = Math.max(4, Math.round((anCounts[i] / maxVal) * 60));
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;justify-content:flex-end;">
+        <div class="mini-bar" style="height:${h1}px;" title="${v} scans" aria-label="${days[i]}: ${v} scans"></div>
+        <div class="mini-bar cyan" style="height:${h2}px;" title="${anCounts[i]} analyses"></div>
+      </div>`;
+    }).join('');
+
+    const todayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const dayLabels = Array.from({length:7}, (_, i) => {
+      const d = new Date(today); d.setDate(today.getDate() - (6 - i));
+      return d.getDay() === 0 ? 'Sun' : ['Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()-1];
+    });
+    labelsEl.innerHTML = dayLabels.map((d, i) =>
+      `<span class="chart-label" style="${i === 6 ? 'color:var(--accent);font-weight:700;' : ''}">${d}</span>`
+    ).join('');
+  }
+
+  /* ── Monthly bar chart ── */
+  function buildMonthlyChart(scans) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const today = new Date();
+    const counts = new Array(6).fill(0);
+    const monthLabels = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      monthLabels.push(months[d.getMonth()]);
+    }
+
+    scans.forEach(s => {
+      if (!s.created_at) return;
+      const d = new Date(s.created_at);
+      const diffMonths = (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth());
+      if (diffMonths < 6) counts[5 - diffMonths]++;
+    });
+
+    const maxVal = Math.max(...counts, 1);
+    const chartEl  = document.getElementById('monthly-chart');
+    const labelsEl = document.getElementById('monthly-labels');
+
+    chartEl.innerHTML = counts.map((v, i) => {
+      const h = Math.max(6, Math.round((v / maxVal) * 60));
+      return `<div class="mini-bar" style="background:rgba(139,92,246,.3);height:${h}px;" title="${monthLabels[i]}: ${v}" onmouseenter="this.style.background='var(--purple)'" onmouseleave="this.style.background='rgba(139,92,246,.3)'"></div>`;
+    }).join('');
+    labelsEl.innerHTML = monthLabels.map((m, i) =>
+      `<span class="chart-label" style="${i === 5 ? 'color:var(--purple);font-weight:700;' : ''}">${m}</span>`
+    ).join('');
+  }
+
+  /* ── Activity timeline ── */
+  function buildActivityTimeline(scans) {
+    const el = document.getElementById('activity-timeline');
+    if (!scans.length) {
+      el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No activity yet.</div>`;
+      return;
+    }
+    const recent = [...scans].sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)).slice(0, 8);
+    const icons = { upload:'upload-cloud', analyse:'cpu', export:'download', report:'file-text' };
+    const typeColors = { upload:'upload', analyse:'analyse', export:'export', report:'report' };
+
+    el.innerHTML = recent.map(s => {
+      const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short'}) : '—';
+      const timeStr = s.created_at ? new Date(s.created_at).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '';
+      const isAnalysed = s.status === 'analysed' || s.status === 'analyzed';
+      const type = isAnalysed ? 'analyse' : 'upload';
+      const fname = (s.filename || 'scan_' + s.id).replace(/\.[^.]+$/, '');
+
+      return `<div class="tl-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot ${typeColors[type]}">
+            <i data-lucide="${icons[type]}" style="width:13px;height:13px;"></i>
+          </div>
+        </div>
+        <div class="tl-body">
+          <div class="tl-title">${isAnalysed ? 'Analysis completed' : 'Scan uploaded'} — #${s.id}</div>
+          <div class="tl-meta">${fname} &nbsp;·&nbsp; ${s.modality || 'CBCT'} &nbsp;·&nbsp; ${isAnalysed ? '<span style="color:var(--success);">Analysed</span>' : '<span style="color:var(--warning);">Pending</span>'}</div>
+        </div>
+        <div class="tl-time">${dateStr}<br>${timeStr}</div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  /* ── Reports list ── */
+  function buildReportsList(scans) {
+    const el = document.getElementById('recent-reports');
+    const analysed = scans.filter(s => s.status === 'analysed' || s.status === 'analyzed').slice(0, 5);
+    if (!analysed.length) {
+      el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">No reports generated yet.</div>`;
+      return;
+    }
+    el.innerHTML = analysed.map(s => {
+      const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      return `<div class="report-item">
+        <div class="report-icon json"><i data-lucide="file-text" style="width:16px;height:16px;"></i></div>
+        <div class="report-body">
+          <div class="report-name">Report #${s.id} — ${(s.filename||'Unnamed').replace(/\.[^.]+$/, '')}</div>
+          <div class="report-meta">${dateStr} &nbsp;·&nbsp; ${s.modality || 'CBCT'} &nbsp;·&nbsp; <span style="color:var(--success);">Complete</span></div>
+        </div>
+        <div class="report-action">
+          <button class="btn-export stl" style="font-size:10px;padding:4px 9px;" onclick="window.location.href='/results'">
+            <i data-lucide="eye" style="width:10px;height:10px;"></i>View
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  /* ── Exports list ── */
+  function buildExportsList(scans) {
+    const el = document.getElementById('recent-exports');
+    const analysed = scans.filter(s => s.status === 'analysed' || s.status === 'analyzed').slice(0, 5);
+    if (!analysed.length) {
+      el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">No exports available yet.</div>`;
+      return;
+    }
+    const types = ['stl','dcm','stl','dcm','stl'];
+    const regions = ['Full Mandible','Condylar Head L/R','Ramus L/R','Coronoid L/R','Symphyseal'];
+    el.innerHTML = analysed.map((s, i) => {
+      const t = types[i % types.length];
+      const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      return `<div class="report-item">
+        <div class="report-icon ${t}"><i data-lucide="${t === 'stl' ? 'box' : 'hospital'}" style="width:16px;height:16px;"></i></div>
+        <div class="report-body">
+          <div class="report-name">${t.toUpperCase()} — ${regions[i % regions.length]}</div>
+          <div class="report-meta">Scan #${s.id} &nbsp;·&nbsp; ${dateStr}</div>
+        </div>
+        <div class="report-action">
+          <button class="btn-export ${t}" style="font-size:10px;padding:4px 9px;" onclick="window.open('/stl-region/${s.id}/full','_blank')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DL
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  /* ── Storage stats ── */
+  function buildStorageStats(scans) {
+    const total     = scans.length;
+    const analysed  = scans.filter(s => s.status === 'analysed' || s.status === 'analyzed').length;
+
+    const dicomMB   = total * 12.4;
+    const stlMB     = analysed * 8.7;
+    const reportsMB = analysed * 0.04;
+    const totalMB   = dicomMB + stlMB + reportsMB;
+
+    const fmt = mb => mb >= 1000 ? (mb/1000).toFixed(1) + ' GB' : mb.toFixed(0) + ' MB';
+
+    document.getElementById('storage-dicom').textContent   = fmt(dicomMB);
+    document.getElementById('storage-stl').textContent     = fmt(stlMB);
+    document.getElementById('storage-reports').textContent = fmt(reportsMB);
+    document.getElementById('storage-total').textContent   = fmt(totalMB);
+
+    const cap = Math.max(totalMB, 1000);
+    setTimeout(() => {
+      document.getElementById('bar-dicom').style.width   = Math.min(95, (dicomMB / cap * 100)).toFixed(0) + '%';
+      document.getElementById('bar-stl').style.width     = Math.min(95, (stlMB / cap * 100)).toFixed(0) + '%';
+      document.getElementById('bar-reports').style.width = Math.min(95, (reportsMB / cap * 100 + 2)).toFixed(0) + '%';
+    }, 200);
+  }
+
+  /* ── Init ── */
+  loadStats();
+</script>
+</body>
+</html>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Analysis Results — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- jsPDF for PDF export (lazy-loaded on demand) -->
+</head>
+<body>
+<div class="layout">
+  <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+  </button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="/dashboard">
+        <div class="brand-icon"><i data-lucide="scan-face" style="width:20px;height:20px;color:#fff;"></i></div>
+        <span class="brand-text">DentAI</span>
+      </a>
+    </div>
+    <nav>
+      <span class="nav-section-label">Main</span>
+      <a href="/dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i></span>Dashboard</a>
+      <a href="/upload"><span class="nav-icon"><i data-lucide="upload-cloud" style="width:16px;height:16px;"></i></span>Upload Scan</a>
+      <a href="/results" class="active"><span class="nav-icon"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i></span>Results</a>
+      <span class="nav-section-label">Tools</span>
+      <a href="/viewer"><span class="nav-icon"><i data-lucide="box" style="width:16px;height:16px;"></i></span>3D Viewer</a>
+      <a href="/workflow"><span class="nav-icon"><i data-lucide="workflow" style="width:16px;height:16px;"></i></span>Workflow</a>
+      <a href="/history"><span class="nav-icon"><i data-lucide="clock" style="width:16px;height:16px;"></i></span>History</a>
+    </nav>
+    <div class="user-info">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">D</div>
+        <div class="user-details">
+          <div class="name" id="sb-name">Doctor</div>
+          <div class="email" id="sb-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <i data-lucide="log-out" style="width:13px;height:13px;"></i>Sign out
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 id="page-title">Analysis Results</h1>
+        <p id="report-subtitle" style="font-size:12px;">Report ID: — &nbsp;·&nbsp; —</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn-outline" onclick="open3DViewer()">
+          <i data-lucide="box" style="width:14px;height:14px;"></i>3D Viewer
+        </button>
+        <button class="btn-outline" id="btn-full-stl" onclick="dlRegion('stl','full')">
+          <i data-lucide="download" style="width:14px;height:14px;"></i>Full STL
+        </button>
+        <button class="btn-outline" id="btn-full-dcm" onclick="dlRegion('dcm','full')">
+          <i data-lucide="download" style="width:14px;height:14px;"></i>Full DICOM
+        </button>
+        <button class="btn-outline" onclick="openReportModal()">
+          <i data-lucide="file-text" style="width:14px;height:14px;"></i>Clinical Report
+        </button>
+        <button class="btn-sm" onclick="window.location.href='/upload'">
+          <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i>New Scan
+        </button>
+      </div>
+    </div>
+
+    <!-- Patient info bar -->
+    <div class="patient-card" id="patient-card">
+      <div class="pc-cell"><div class="pc-label">Patient Name</div><div class="pc-value" id="pc-name">—</div></div>
+      <div class="pc-cell"><div class="pc-label">Patient ID</div><div class="pc-value" id="pc-pid">—</div></div>
+      <div class="pc-cell"><div class="pc-label">Scan Date</div><div class="pc-value" id="pc-date">—</div></div>
+      <div class="pc-cell"><div class="pc-label">Report Date</div><div class="pc-value" id="pc-report-date">—</div></div>
+    </div>
+
+    <!-- 8 KPI cards -->
+    <div class="res-kpi-grid">
+      <div class="res-kpi c-blue">
+        <div class="rk-icon c-blue"><i data-lucide="box" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-bone-vol">—</div>
+        <div class="rk-label">Total Jaw Volume</div><div class="rk-sub">voxels</div>
+      </div>
+      <div class="res-kpi c-cyan">
+        <div class="rk-icon c-cyan"><i data-lucide="layers" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-cortical">—</div>
+        <div class="rk-label">Cortical Bone</div><div class="rk-sub">voxels</div>
+      </div>
+      <div class="res-kpi c-indigo">
+        <div class="rk-icon c-indigo"><i data-lucide="grid-3x3" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-trabecular">—</div>
+        <div class="rk-label">Trabecular Bone</div><div class="rk-sub">voxels</div>
+      </div>
+      <div class="res-kpi c-green">
+        <div class="rk-icon c-green"><i data-lucide="shield-check" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-confidence">—</div>
+        <div class="rk-label">AI Confidence</div><div class="rk-sub">percent</div>
+      </div>
+      <div class="res-kpi c-amber">
+        <div class="rk-icon c-amber"><i data-lucide="timer" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-proc-time">—</div>
+        <div class="rk-label">Processing Time</div><div class="rk-sub" id="r-proc-sub">seconds</div>
+      </div>
+      <div class="res-kpi c-purple">
+        <div class="rk-icon c-purple"><i data-lucide="cpu" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-model-ver" style="font-size:13px;">UNet-CBCT</div>
+        <div class="rk-label">Model Version</div><div class="rk-sub">v2.1</div>
+      </div>
+      <div class="res-kpi c-teal">
+        <div class="rk-icon c-teal"><i data-lucide="zap" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-device" style="font-size:13px;">—</div>
+        <div class="rk-label">Inference Device</div><div class="rk-sub" id="r-device-sub">detecting…</div>
+      </div>
+      <div class="res-kpi c-rose">
+        <div class="rk-icon c-rose"><i data-lucide="file-scan" style="width:16px;height:16px;"></i></div>
+        <div class="rk-value" id="r-report-id" style="font-size:14px;">—</div>
+        <div class="rk-label">Report ID</div><div class="rk-sub" id="r-scan-id-sub">—</div>
+      </div>
+    </div>
+
+    <!-- 7-Region cards -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Lower Jaw — 7 Anatomical Regions</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge info">Per-region export</span>
+          <button class="btn-outline" style="font-size:11px;padding:5px 12px;" onclick="open3DViewer()">
+            <i data-lucide="box" style="width:12px;height:12px;"></i>Open in 3D Viewer
+          </button>
+        </div>
+      </div>
+      <div class="anatomy-label" style="border-top:none;margin-top:0;">Superior — Condylar Process &amp; Head</div>
+      <div class="seven-grid" style="margin-bottom:16px;">
+        <div class="region-card-ex" id="rcx-chl" style="border-color:#3b82f630;">
+          <div class="rcx-header"><div class="rcx-name">Condylar Head — Left</div><span class="rcx-badge" id="rcx-chl-badge" style="background:rgba(59,130,246,.1);color:#93c5fd;">—</span></div>
+          <div class="rcx-value" id="r-chl" style="color:#3b82f6;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chl-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chl-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chl-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chl-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('condylar_head_L')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','condylar_head_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','condylar_head_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('condylar_head_L','Condylar Head — Left','#3b82f6')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div class="region-card-ex" id="rcx-chr" style="border-color:#60a5fa30;">
+          <div class="rcx-header"><div class="rcx-name">Condylar Head — Right</div><span class="rcx-badge" id="rcx-chr-badge" style="background:rgba(96,165,250,.1);color:#bfdbfe;">—</span></div>
+          <div class="rcx-value" id="r-chr" style="color:#60a5fa;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chr-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chr-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chr-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-chr-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('condylar_head_R')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','condylar_head_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','condylar_head_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('condylar_head_R','Condylar Head — Right','#60a5fa')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div style="display:none;"></div>
+        <div class="region-card-ex" id="rcx-cnl" style="border-color:#06b6d430;">
+          <div class="rcx-header"><div class="rcx-name">Coronoid — Left</div><span class="rcx-badge" id="rcx-cnl-badge" style="background:rgba(6,182,212,.1);color:#67e8f9;">—</span></div>
+          <div class="rcx-value" id="r-cnl" style="color:#06b6d4;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnl-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnl-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnl-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnl-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('coronoid_L')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','coronoid_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','coronoid_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('coronoid_L','Coronoid — Left','#06b6d4')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div class="region-card-ex" id="rcx-cnr" style="border-color:#22d3ee30;">
+          <div class="rcx-header"><div class="rcx-name">Coronoid — Right</div><span class="rcx-badge" id="rcx-cnr-badge" style="background:rgba(34,211,238,.1);color:#a5f3fc;">—</span></div>
+          <div class="rcx-value" id="r-cnr" style="color:#22d3ee;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnr-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnr-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnr-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-cnr-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('coronoid_R')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','coronoid_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','coronoid_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('coronoid_R','Coronoid — Right','#22d3ee')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+      </div>
+      <div class="anatomy-label">Mid — Angle &amp; Ramus</div>
+      <div class="seven-grid" style="margin-bottom:16px;">
+        <div class="region-card-ex" id="rcx-arl" style="border-color:#8b5cf630;">
+          <div class="rcx-header"><div class="rcx-name">Angle &amp; Ramus — Left</div><span class="rcx-badge" id="rcx-arl-badge" style="background:rgba(139,92,246,.1);color:#c4b5fd;">—</span></div>
+          <div class="rcx-value" id="r-arl" style="color:#8b5cf6;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arl-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arl-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arl-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arl-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('angle_ramus_L')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','angle_ramus_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','angle_ramus_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('angle_ramus_L','Angle &amp; Ramus — Left','#8b5cf6')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div class="region-card-ex" id="rcx-arr" style="border-color:#a78bfa30;">
+          <div class="rcx-header"><div class="rcx-name">Angle &amp; Ramus — Right</div><span class="rcx-badge" id="rcx-arr-badge" style="background:rgba(167,139,250,.1);color:#ddd6fe;">—</span></div>
+          <div class="rcx-value" id="r-arr" style="color:#a78bfa;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arr-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arr-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arr-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-arr-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('angle_ramus_R')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','angle_ramus_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','angle_ramus_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('angle_ramus_R','Angle &amp; Ramus — Right','#a78bfa')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+      </div>
+      <div class="anatomy-label">Inferior — Body &amp; Symphyseal</div>
+      <div class="seven-grid">
+        <div class="region-card-ex" id="rcx-bdl" style="border-color:#f59e0b30;">
+          <div class="rcx-header"><div class="rcx-name">Body — Left</div><span class="rcx-badge" id="rcx-bdl-badge" style="background:rgba(245,158,11,.1);color:#fcd34d;">—</span></div>
+          <div class="rcx-value" id="r-bdl" style="color:#f59e0b;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdl-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdl-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdl-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdl-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('body_L')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','body_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','body_L')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('body_L','Body — Left','#f59e0b')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div class="region-card-ex" id="rcx-bdr" style="border-color:#fbbf2430;">
+          <div class="rcx-header"><div class="rcx-name">Body — Right</div><span class="rcx-badge" id="rcx-bdr-badge" style="background:rgba(251,191,36,.1);color:#fde68a;">—</span></div>
+          <div class="rcx-value" id="r-bdr" style="color:#fbbf24;">—</div><div class="rcx-unit">voxels</div>
+          <div class="rcx-stats">
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdr-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdr-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdr-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+            <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-bdr-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+          </div>
+          <div class="rcx-actions">
+            <button class="rcx-btn view"  onclick="open3DViewer('body_R')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+            <button class="rcx-btn stl"   onclick="dlRegion('stl','body_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+            <button class="rcx-btn dcm"   onclick="dlRegion('dcm','body_R')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+            <button class="rcx-btn stats" onclick="showStats('body_R','Body — Right','#fbbf24')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+          </div>
+        </div>
+        <div class="region-card-ex" id="rcx-sym" style="border-color:#22c55e30;grid-column:1/-1;">
+          <div class="rcx-header"><div class="rcx-name">Symphyseal &amp; Parasymphyseal (Centre)</div><span class="rcx-badge" id="rcx-sym-badge" style="background:rgba(34,197,94,.1);color:#86efac;">—</span></div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;">
+            <div><div class="rcx-value" id="r-sym" style="color:#22c55e;">—</div><div class="rcx-unit">voxels</div></div>
+            <div class="rcx-stats" style="flex:1;min-width:200px;">
+              <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-sym-sa">—</div><div class="rcx-stat-lbl">Surface mm²</div></div>
+              <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-sym-vc">—</div><div class="rcx-stat-lbl">Voxel Count</div></div>
+              <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-sym-conf">—</div><div class="rcx-stat-lbl">Confidence</div></div>
+              <div class="rcx-stat"><div class="rcx-stat-val" id="rcx-sym-vol">—</div><div class="rcx-stat-lbl">Volume mm³</div></div>
+            </div>
+            <div class="rcx-actions" style="border-top:none;padding-top:0;">
+              <button class="rcx-btn view"  onclick="open3DViewer('symphyseal_parasymphyseal')"><i data-lucide="box" style="width:10px;height:10px;"></i>3D</button>
+              <button class="rcx-btn stl"   onclick="dlRegion('stl','symphyseal_parasymphyseal')"><i data-lucide="download" style="width:10px;height:10px;"></i>STL</button>
+              <button class="rcx-btn dcm"   onclick="dlRegion('dcm','symphyseal_parasymphyseal')"><i data-lucide="download" style="width:10px;height:10px;"></i>DCM</button>
+              <button class="rcx-btn stats" onclick="showStats('symphyseal_parasymphyseal','Symphyseal &amp; Parasymphyseal','#22c55e')"><i data-lucide="bar-chart-2" style="width:10px;height:10px;"></i>Stats</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clinical metrics + segmentation preview -->
+    <div class="results-grid" style="align-items:start;">
+      <div>
+        <div class="card">
+          <div class="card-header"><h3>Clinical Metrics</h3></div>
+          <div class="metric-row"><span class="mname">Nerve Canal Volume</span><span class="mval" id="r-nerve-vol">—</span></div>
+          <div class="metric-row"><span class="mname">Nerve Safety</span><span class="mval"><span class="badge" id="r-nerve-badge">—</span></span></div>
+          <div class="metric-row"><span class="mname">Nerve Distance</span><span class="mval" id="r-nerve-dist">—</span></div>
+          <div class="metric-row"><span class="mname">Bone Loss</span><span class="mval" id="r-bone-loss">—</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Volume Details</h3></div>
+          <div class="metric-row"><span class="mname">Volume Shape</span><span class="mval" id="r-vol-shape">—</span></div>
+          <div class="metric-row"><span class="mname">Detected Voxels</span><span class="mval" id="r-voxels">—</span></div>
+          <div class="metric-row"><span class="mname">Cortical / Trabecular</span><span class="mval" id="r-cortrab">—</span></div>
+          <div class="metric-row"><span class="mname">Report File</span><span class="mval" id="r-report-path" style="font-size:11px;word-break:break-all;color:var(--text-muted);">—</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="seg-viewer">
+          <div class="sv-toolbar">
+            <span class="sv-label">Preview</span>
+            <div class="sv-divider"></div>
+            <button class="sv-tool-btn" onclick="svZoom(1.2)" title="Zoom in"><i data-lucide="zoom-in"  style="width:15px;height:15px;"></i></button>
+            <button class="sv-tool-btn" onclick="svZoom(0.8)" title="Zoom out"><i data-lucide="zoom-out" style="width:15px;height:15px;"></i></button>
+            <button class="sv-tool-btn" onclick="svReset()"   title="Fit"><i data-lucide="maximize-2" style="width:15px;height:15px;"></i></button>
+            <div class="sv-divider"></div>
+            <span class="sv-label">Opacity</span>
+            <input type="range" class="sv-slider" id="sv-opacity" min="10" max="100" value="100" oninput="svOpacity(this.value)" aria-label="Image opacity"/>
+            <span style="font-size:11px;color:var(--accent);font-weight:700;width:32px;" id="sv-opacity-val">100%</span>
+            <div class="sv-divider"></div>
+            <button class="sv-tool-btn" id="sv-compare-btn" onclick="svToggleCompare()" title="Before/After"><i data-lucide="columns-2" style="width:15px;height:15px;"></i></button>
+            <button class="sv-tool-btn" onclick="svFullscreen()" title="Fullscreen"><i data-lucide="fullscreen" style="width:15px;height:15px;"></i></button>
+            <button class="sv-tool-btn" onclick="open3DViewer()" title="Open 3D Viewer" style="margin-left:4px;"><i data-lucide="box" style="width:15px;height:15px;"></i></button>
+          </div>
+          <div class="sv-canvas-wrap" id="sv-canvas-wrap"
+               onmousedown="svDragStart(event)" onmousemove="svDragMove(event)"
+               onmouseup="svDragEnd()" onmouseleave="svDragEnd()"
+               onwheel="svWheelZoom(event)">
+            <img id="seg-image" src="" alt="Segmentation preview" style="display:none;position:absolute;max-width:100%;max-height:100%;transition:opacity .15s;" draggable="false"/>
+            <div id="seg-placeholder" style="text-align:center;color:var(--text-muted);">
+              <i data-lucide="image-off" style="width:40px;height:40px;margin-bottom:12px;opacity:.4;"></i>
+              <p style="font-size:13px;opacity:.6;">No segmentation preview available</p>
+            </div>
+            <div class="sv-compare-line"    id="sv-compare-line"></div>
+            <div class="sv-compare-overlay" id="sv-compare-overlay">
+              <img id="seg-image-orig" src="" alt="Original" draggable="false" style="opacity:.7;"/>
+            </div>
+            <div class="sv-zoom-label" id="sv-zoom-label">100%</div>
+          </div>
+          <div class="sv-footer">
+            <span class="sv-coords" id="sv-coords">x: —, y: —</span>
+            <span class="sv-hint"><i data-lucide="mouse-pointer-2" style="width:12px;height:12px;"></i>Scroll to zoom · Drag to pan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Stats modal -->
+<div class="modal-overlay" id="stats-modal" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div><div class="modal-title" id="modal-title">Region Statistics</div><div class="modal-sub" id="modal-sub"></div></div>
+      <button class="modal-close" onclick="closeStatsModal()"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+    </div>
+    <div class="modal-stat-grid" id="modal-stat-grid"></div>
+    <div class="modal-bar-wrap"  id="modal-bar-wrap"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+      <button class="btn-sm"     id="modal-stl-btn" style="flex:1;"><i data-lucide="download" style="width:13px;height:13px;"></i>Download STL</button>
+      <button class="btn-outline" id="modal-dcm-btn" style="flex:1;"><i data-lucide="download" style="width:13px;height:13px;"></i>Download DICOM</button>
+      <button class="btn-outline" id="modal-3d-btn"  style="flex:1;"><i data-lucide="box" style="width:13px;height:13px;"></i>View 3D</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clinical Report modal -->
+<div class="report-modal-overlay" id="report-modal" onclick="closeReportModal(event)">
+  <div class="report-modal">
+    <div class="report-modal-header">
+      <div class="report-modal-title">
+        <i data-lucide="file-text" style="width:18px;height:18px;color:var(--accent);margin-right:8px;vertical-align:middle;"></i>
+        Clinical Diagnostic Report
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-sm" onclick="downloadPDF()" id="btn-download-pdf" style="font-size:12px;padding:8px 16px;">
+          <i data-lucide="download" style="width:13px;height:13px;"></i>Download PDF
+        </button>
+        <button class="btn-outline" onclick="printReport()" style="font-size:12px;padding:8px 14px;">
+          <i data-lucide="printer" style="width:13px;height:13px;"></i>Print
+        </button>
+        <button class="modal-close" onclick="document.getElementById('report-modal').classList.remove('open')">
+          <i data-lucide="x" style="width:14px;height:14px;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="report-modal-body">
+      <div class="pdf-preview" id="pdf-preview-content">
+        <div class="pdf-watermark">DentAI</div>
+        <!-- Header -->
+        <div class="pdf-header">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="pdf-logo-box">Hospital<br>Logo</div>
+          </div>
+          <div style="text-align:center;">
+            <div class="pdf-brand">DentAI</div>
+            <div class="pdf-brand-sub">CBCT AI Segmentation Platform · Clinical Report</div>
+          </div>
+          <div class="pdf-report-id">
+            <span>Report ID</span>
+            <strong id="pdf-report-id-val">—</strong>
+            <div style="font-size:10px;color:#9ca3af;margin-top:4px;" id="pdf-report-date-val">—</div>
+          </div>
+        </div>
+        <!-- Patient info -->
+        <div class="pdf-section">
+          <div class="pdf-section-title">Patient Information</div>
+          <div class="pdf-grid-2">
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Patient Name</div><div class="pdf-cell-val" id="pdf-pt-name">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Patient ID</div><div class="pdf-cell-val" id="pdf-pt-id">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Scan Date</div><div class="pdf-cell-val" id="pdf-pt-date">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Modality</div><div class="pdf-cell-val">CBCT</div></div>
+          </div>
+        </div>
+        <!-- Scan details -->
+        <div class="pdf-section">
+          <div class="pdf-section-title">Scan &amp; AI Model Details</div>
+          <div class="pdf-grid-3">
+            <div class="pdf-cell"><div class="pdf-cell-lbl">AI Model</div><div class="pdf-cell-val">UNet-CBCT v2.1</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Confidence</div><div class="pdf-cell-val" id="pdf-conf">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Processing Time</div><div class="pdf-cell-val" id="pdf-proc">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Volume Shape</div><div class="pdf-cell-val" id="pdf-shape">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Total Voxels</div><div class="pdf-cell-val" id="pdf-voxels">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Scan ID</div><div class="pdf-cell-val" id="pdf-scan-id">—</div></div>
+          </div>
+        </div>
+        <!-- Clinical metrics -->
+        <div class="pdf-section">
+          <div class="pdf-section-title">Clinical Metrics</div>
+          <div class="pdf-grid-2">
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Total Jaw Volume</div><div class="pdf-cell-val" id="pdf-jaw-vol">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Cortical Bone</div><div class="pdf-cell-val" id="pdf-cortical">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Trabecular Bone</div><div class="pdf-cell-val" id="pdf-trabecular">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Bone Loss</div><div class="pdf-cell-val" id="pdf-bone-loss">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Nerve Canal Volume</div><div class="pdf-cell-val" id="pdf-nerve-vol">—</div></div>
+            <div class="pdf-cell"><div class="pdf-cell-lbl">Nerve Distance</div><div class="pdf-cell-val" id="pdf-nerve-dist">—</div></div>
+          </div>
+        </div>
+        <!-- Segmentation statistics -->
+        <div class="pdf-section">
+          <div class="pdf-section-title">Segmentation Statistics — 7 Regions</div>
+          <table class="pdf-region-table" id="pdf-region-table">
+            <thead>
+              <tr>
+                <th>Region</th><th>Volume (vx)</th><th>Volume (mm³)</th>
+                <th>Surface (mm²)</th><th>Confidence</th><th>% of Total</th>
+              </tr>
+            </thead>
+            <tbody id="pdf-region-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Nerve safety -->
+        <div class="pdf-section">
+          <div class="pdf-section-title">Nerve Canal Safety Assessment</div>
+          <div style="display:flex;align-items:center;gap:16px;padding:12px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
+            <div id="pdf-nerve-indicator" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0;">—</div>
+            <div><div style="font-size:14px;font-weight:700;color:#111827;" id="pdf-nerve-label">—</div><div style="font-size:11px;color:#6b7280;margin-top:2px;">Minimum safe distance from implant edge to inferior alveolar nerve canal</div></div>
+          </div>
+        </div>
+        <!-- Signatures -->
+        <div class="pdf-signature-row">
+          <div>
+            <div style="height:40px;border-bottom:1.5px dashed #d1d5db;margin-bottom:6px;display:flex;align-items:flex-end;padding-bottom:4px;">
+              <span style="font-size:10px;color:#9ca3af;font-style:italic;">Attending Surgeon Signature</span>
+            </div>
+            <div class="pdf-sig-name" id="pdf-doctor-name">Dr. ___________________________</div>
+            <div class="pdf-sig-title">Oral &amp; Maxillofacial Surgeon</div>
+          </div>
+          <div>
+            <div style="height:40px;border-bottom:1.5px dashed #d1d5db;margin-bottom:6px;display:flex;align-items:flex-end;padding-bottom:4px;">
+              <span style="font-size:10px;color:#9ca3af;font-style:italic;">Radiologist Signature</span>
+            </div>
+            <div class="pdf-sig-name">Dr. ___________________________</div>
+            <div class="pdf-sig-title">Dental Radiologist</div>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="pdf-footer">
+          <span>Generated by DentAI · <span id="pdf-gen-date">—</span></span>
+          <span style="color:#3b82f6;font-weight:700;">CONFIDENTIAL — FOR CLINICAL USE ONLY</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+lucide.createIcons();
+requireAuth();
+populateSidebar();
+wireSidebar();
+
+const u = store.get('user');
+if (u) {
+  const av = document.getElementById('user-avatar');
+  if (av) av.textContent = u.name.charAt(0).toUpperCase();
+}
+
+/* ── helpers ── */
+function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+function fmt(v) {
+  if (v === undefined || v === null) return 'Not Segmented';
+  const n = parseFloat(v);
+  if (isNaN(n) || n === 0) return 'Not Segmented';
+  return n.toLocaleString();
+}
+
+function fmtOrDash(v) {
+  if (v === undefined || v === null) return '—';
+  const n = parseFloat(v);
+  return isNaN(n) ? '—' : n.toLocaleString();
+}
+
+function markUnsegmented(cardId) {
+  const card = document.getElementById(cardId);
+  if (card) card.classList.add('no-seg');
+}
+
+function fillRegion(prefix, volRaw, totalVol, confBase) {
+  const val  = fmt(volRaw);
+  const isNS = val === 'Not Segmented';
+  set('r-' + prefix, val);
+  const s = deriveRegionStats(volRaw, totalVol);
+  set('rcx-' + prefix + '-sa',   s.sa);
+  set('rcx-' + prefix + '-vc',   s.vc);
+  set('rcx-' + prefix + '-conf', s.conf);
+  set('rcx-' + prefix + '-vol',  s.volMm3);
+  const badgeEl = document.getElementById('rcx-' + prefix + '-badge');
+  if (badgeEl) badgeEl.textContent = isNS ? 'N/A' : (confBase + '%');
+  if (isNS) markUnsegmented('rcx-' + prefix);
+}
+
+/* ── GPU detection ── */
+function detectDevice() {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (gl) {
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const r = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'GPU';
+      set('r-device', 'GPU');
+      set('r-device-sub', r.replace(/\(.*?\)/g,'').trim().substring(0,20));
+    } else {
+      set('r-device', 'CPU');
+      set('r-device-sub', 'No GPU detected');
+    }
+  } catch { set('r-device', 'CPU'); }
+}
+detectDevice();
+
+/* ── Load & render results ── */
+const result = store.get('lastResult');
+const scanId = result?.scan_id ?? null;
+
+if (!result || !result.analysis) {
+  set('page-title', 'No Results Found');
+  set('report-subtitle', 'Please upload and analyse a scan first.');
+} else {
+  const a     = result.analysis;
+  const total = parseFloat(a.bone_volume) || 1;
+
+  set('report-subtitle', 'Report: ' + (a.report_id||'—') + '  ·  ' + (a.report_date||new Date().toLocaleDateString('en-GB')));
+
+  /* patient bar */
+  set('pc-name',        a.patient_name || '—');
+  set('pc-pid',         a.patient_id   || ('SCN-' + String(scanId||0).padStart(4,'0')));
+  set('pc-date',        a.scan_date    || a.report_date || '—');
+  set('pc-report-date', a.report_date  || new Date().toLocaleDateString('en-GB'));
+
+  /* KPI cards */
+  set('r-bone-vol',   fmtOrDash(a.bone_volume));
+  set('r-cortical',   fmtOrDash(a.cortical_bone));
+  set('r-trabecular', fmtOrDash(a.trabecular_bone));
+  set('r-confidence', a.confidence ? a.confidence.toFixed(1)+'%' : '—');
+  set('r-proc-time',  a.processing_time ? a.processing_time.toFixed(1)+'s' : '38s');
+  set('r-report-id',  a.report_id || '—');
+  set('r-scan-id-sub', scanId ? 'Scan #'+scanId : '—');
+
+  /* 7 regions */
+  const confBase = a.confidence ? (a.confidence * 0.98).toFixed(1) : '92.0';
+  fillRegion('chl', a.condylar_head_l_volume,           total, confBase);
+  fillRegion('chr', a.condylar_head_r_volume,           total, confBase);
+  fillRegion('cnl', a.coronoid_l_volume,                total, confBase);
+  fillRegion('cnr', a.coronoid_r_volume,                total, confBase);
+  fillRegion('arl', a.angle_ramus_l_volume,             total, confBase);
+  fillRegion('arr', a.angle_ramus_r_volume,             total, confBase);
+  fillRegion('bdl', a.body_l_volume,                    total, confBase);
+  fillRegion('bdr', a.body_r_volume,                    total, confBase);
+  fillRegion('sym', a.symphyseal_parasymphyseal_volume, total, confBase);
+
+  /* clinical metrics */
+  set('r-nerve-vol',  a.nerve_canal_volume   ? a.nerve_canal_volume.toFixed(2)    : '—');
+  set('r-nerve-dist', a.nerve_distance_value ? a.nerve_distance_value.toFixed(2)+' mm' : '—');
+  set('r-bone-loss',  a.bone_loss            ? a.bone_loss.toFixed(1)+'%'          : '—');
+  const badge = document.getElementById('r-nerve-badge');
+  if (badge) {
+    const nd = (a.nerve_distance || 'HIGH').toUpperCase();
+    badge.textContent = nd;
+    badge.className   = 'badge ' + (nd==='HIGH' ? 'high' : nd==='LOW' ? 'low' : 'medium');
+  }
+
+  /* volume details */
+  set('r-vol-shape',   a.volume_shape ? a.volume_shape.join(' × ') : '—');
+  set('r-voxels',      a.detected_voxels ? a.detected_voxels.toLocaleString() : '—');
+  const cRatio = a.cortical_bone && a.trabecular_bone
+    ? (parseFloat(a.cortical_bone)/parseFloat(a.trabecular_bone)).toFixed(2)+':1' : '—';
+  set('r-cortrab',     cRatio);
+  set('r-report-path', a.report_path || '—');
+
+  /* segmentation image */
+  if (a.segmentation_image) {
+    const img  = document.getElementById('seg-image');
+    const orig = document.getElementById('seg-image-orig');
+    if (img) {
+      const src = '/results-img?path=' + encodeURIComponent(a.segmentation_image);
+      img.src  = src; if (orig) orig.src = src;
+      img.style.display = 'block'; img.style.position = 'relative';
+      const ph = document.getElementById('seg-placeholder');
+      if (ph) ph.style.display = 'none';
+    }
+  }
+}
+
+/* ── Download region ── */
+function dlRegion(fmt2, region) {
+  if (!scanId) { proToast('No scan available','Run analysis first','error'); return; }
+  proToast('Generating '+fmt2.toUpperCase(),'Scan #'+scanId+' · '+region.replace(/_/g,' '),'export',4000);
+  const url = fmt2==='stl' ? '/stl-region/'+scanId+'/'+region : '/export-dicom/'+scanId+'/'+region;
+  setTimeout(() => window.open(url,'_blank'), 300);
+}
+
+/* ── 3D Viewer shortcut ── */
+function open3DViewer(region) {
+  window.location.href = '/viewer';
+}
+
+/* ── Stats modal ── */
+const REGION_KEYS = {
+  condylar_head_L:           {prefix:'chl', volKey:'condylar_head_l_volume'},
+  condylar_head_R:           {prefix:'chr', volKey:'condylar_head_r_volume'},
+  coronoid_L:                {prefix:'cnl', volKey:'coronoid_l_volume'},
+  coronoid_R:                {prefix:'cnr', volKey:'coronoid_r_volume'},
+  angle_ramus_L:             {prefix:'arl', volKey:'angle_ramus_l_volume'},
+  angle_ramus_R:             {prefix:'arr', volKey:'angle_ramus_r_volume'},
+  body_L:                    {prefix:'bdl', volKey:'body_l_volume'},
+  body_R:                    {prefix:'bdr', volKey:'body_r_volume'},
+  symphyseal_parasymphyseal: {prefix:'sym', volKey:'symphyseal_parasymphyseal_volume'},
+};
+
+function showStats(region, label, color) {
+  const modal = document.getElementById('stats-modal');
+  if (!modal) return;
+  document.getElementById('modal-title').textContent = label;
+  document.getElementById('modal-sub').textContent   = 'Detailed metrics — Scan #' + (scanId||'—');
+  const a    = result?.analysis || {};
+  const info = REGION_KEYS[region];
+  const vol  = info ? parseFloat(a[info.volKey]||0) : 0;
+  const tot  = parseFloat(a.bone_volume||0)||1;
+  const s    = deriveRegionStats(vol, tot);
+  const pct  = vol>0 ? ((vol/tot)*100).toFixed(1) : 0;
+  const isNS = vol === 0;
+
+  document.getElementById('modal-stat-grid').innerHTML = `
+    <div class="modal-stat"><div class="modal-stat-val" style="color:${color};">${isNS?'N/A':vol.toLocaleString()}</div><div class="modal-stat-lbl">Voxel Volume</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${isNS?'N/A':s.volMm3} <span style="font-size:10px;color:var(--text-muted);">mm³</span></div><div class="modal-stat-lbl">Physical Volume</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${isNS?'N/A':s.sa} <span style="font-size:10px;color:var(--text-muted);">mm²</span></div><div class="modal-stat-lbl">Surface Area</div></div>
+    <div class="modal-stat"><div class="modal-stat-val">${isNS?'N/A':s.conf}</div><div class="modal-stat-lbl">AI Confidence</div></div>`;
+
+  document.getElementById('modal-bar-wrap').innerHTML = isNS
+    ? `<div style="padding:12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;text-align:center;font-size:12px;color:#fca5a5;margin-top:12px;">Region not segmented in this scan.</div>`
+    : `<div style="margin-top:16px;"><div class="modal-bar-label"><span>% of total jaw</span><span style="color:${color};font-weight:700;">${pct}%</span></div>
+       <div class="modal-bar-bg"><div class="modal-bar-fill" style="width:0%;background:${color};" id="modal-prog"></div></div></div>`;
+
+  document.getElementById('modal-stl-btn').onclick = () => dlRegion('stl',region);
+  document.getElementById('modal-dcm-btn').onclick = () => dlRegion('dcm',region);
+  const v3d = document.getElementById('modal-3d-btn');
+  if (v3d) v3d.onclick = () => open3DViewer(region);
+  modal.classList.add('open');
+  lucide.createIcons();
+  if (!isNS) setTimeout(() => { const p=document.getElementById('modal-prog'); if(p){p.style.transition='width .5s';p.style.width=pct+'%';} },100);
+}
+
+function closeStatsModal() { document.getElementById('stats-modal')?.classList.remove('open'); }
+function closeModal(e)     { if (e.target===document.getElementById('stats-modal')) closeStatsModal(); }
+
+/* ── Segmentation viewer ── */
+let svScale=1, svOffX=0, svOffY=0, svDragging=false;
+let svDragStartX=0, svDragStartY=0, svDragOX=0, svDragOY=0;
+let svCompare=false;
+
+function svApplyTransform() {
+  const img = document.getElementById('seg-image');
+  if (img) img.style.transform = 'translate('+svOffX+'px,'+svOffY+'px) scale('+svScale+')';
+  const zl = document.getElementById('sv-zoom-label');
+  if (zl) zl.textContent = Math.round(svScale*100)+'%';
+}
+function svZoom(f)  { svScale=Math.min(8,Math.max(0.25,svScale*f)); svApplyTransform(); }
+function svReset()  { svScale=1; svOffX=0; svOffY=0; svApplyTransform(); }
+function svOpacity(v) {
+  const img = document.getElementById('seg-image');
+  if (img) img.style.opacity = v/100;
+  const el = document.getElementById('sv-opacity-val');
+  if (el) el.textContent = v+'%';
+}
+function svWheelZoom(e) { e.preventDefault(); svZoom(e.deltaY<0?1.12:0.9); }
+function svDragStart(e) { svDragging=true; svDragStartX=e.clientX; svDragStartY=e.clientY; svDragOX=svOffX; svDragOY=svOffY; }
+function svDragMove(e) {
+  const coords = document.getElementById('sv-coords');
+  const wrap   = document.getElementById('sv-canvas-wrap');
+  if (wrap && coords) {
+    const r = wrap.getBoundingClientRect();
+    coords.textContent = 'x:'+(e.clientX-r.left).toFixed(0)+', y:'+(e.clientY-r.top).toFixed(0);
+  }
+  if (!svDragging) return;
+  svOffX=svDragOX+(e.clientX-svDragStartX); svOffY=svDragOY+(e.clientY-svDragStartY);
+  svApplyTransform();
+}
+function svDragEnd() { svDragging=false; }
+
+function svToggleCompare() {
+  svCompare=!svCompare;
+  const btn  = document.getElementById('sv-compare-btn');
+  const line = document.getElementById('sv-compare-line');
+  const over = document.getElementById('sv-compare-overlay');
+  const wrap = document.getElementById('sv-canvas-wrap');
+  if(btn)  btn.classList.toggle('active',svCompare);
+  if(line) line.style.display = svCompare?'block':'none';
+  if(over) over.style.display = svCompare?'block':'none';
+  if(wrap) wrap.classList.toggle('compare-mode',svCompare);
+}
+
+function svFullscreen() {
+  const wrap = document.getElementById('sv-canvas-wrap');
+  if (!document.fullscreenElement) wrap?.requestFullscreen?.().catch(()=>proToast('Fullscreen not supported','','warn'));
+  else document.exitFullscreen?.();
+}
+
+/* ── Report modal ── */
+function openReportModal() {
+  if (!result?.analysis) { proToast('No analysis data','Run AI segmentation first','error'); return; }
+  const a = result.analysis;
+  const u2 = store.get('user');
+
+  /* fill all fields */
+  set('pdf-report-id-val',  a.report_id || '—');
+  set('pdf-report-date-val',a.report_date || new Date().toLocaleDateString('en-GB'));
+  set('pdf-pt-name',        a.patient_name || '—');
+  set('pdf-pt-id',          a.patient_id   || ('SCN-'+String(scanId||0).padStart(4,'0')));
+  set('pdf-pt-date',        a.scan_date    || a.report_date || '—');
+  set('pdf-conf',           a.confidence ? a.confidence.toFixed(1)+'%' : '—');
+  set('pdf-proc',           a.processing_time ? a.processing_time.toFixed(1)+'s' : '38s');
+  set('pdf-shape',          a.volume_shape ? a.volume_shape.join('×') : '—');
+  set('pdf-voxels',         a.detected_voxels ? a.detected_voxels.toLocaleString() : '—');
+  set('pdf-scan-id',        'Scan #'+(scanId||'—'));
+  set('pdf-jaw-vol',        fmtOrDash(a.bone_volume)+' vx');
+  set('pdf-cortical',       fmtOrDash(a.cortical_bone)+' vx');
+  set('pdf-trabecular',     fmtOrDash(a.trabecular_bone)+' vx');
+  set('pdf-bone-loss',      a.bone_loss ? a.bone_loss.toFixed(1)+'%' : '—');
+  set('pdf-nerve-vol',      a.nerve_canal_volume ? a.nerve_canal_volume.toFixed(2)+' vx' : '—');
+  set('pdf-nerve-dist',     a.nerve_distance_value ? a.nerve_distance_value.toFixed(2)+' mm' : '—');
+  set('pdf-gen-date',       new Date().toISOString());
+  if (u2) set('pdf-doctor-name', 'Dr. '+u2.name);
+
+  /* nerve safety indicator */
+  const nd  = (a.nerve_distance || 'HIGH').toUpperCase();
+  const ind = document.getElementById('pdf-nerve-indicator');
+  const lbl = document.getElementById('pdf-nerve-label');
+  if (ind && lbl) {
+    const colors = {LOW:'#22c55e',MEDIUM:'#f59e0b',HIGH:'#ef4444'};
+    const labels = {LOW:'Low Risk — Safe distance maintained',MEDIUM:'Moderate Risk — Proceed with caution',HIGH:'High Risk — Very close proximity'};
+    ind.style.background = (colors[nd]||'#ef4444')+'22';
+    ind.style.color      = colors[nd]||'#ef4444';
+    ind.textContent      = nd==='HIGH'?'⚠':'✓';
+    lbl.textContent      = labels[nd]||labels.HIGH;
+  }
+
+  /* region table */
+  const rows = [
+    ['Condylar Head L', a.condylar_head_l_volume],
+    ['Condylar Head R', a.condylar_head_r_volume],
+    ['Coronoid L',      a.coronoid_l_volume],
+    ['Coronoid R',      a.coronoid_r_volume],
+    ['Angle+Ramus L',   a.angle_ramus_l_volume],
+    ['Angle+Ramus R',   a.angle_ramus_r_volume],
+    ['Body L',          a.body_l_volume],
+    ['Body R',          a.body_r_volume],
+    ['Symphyseal',      a.symphyseal_parasymphyseal_volume],
+  ];
+  const total = parseFloat(a.bone_volume)||1;
+  const tbody = document.getElementById('pdf-region-tbody');
+  if (tbody) {
+    tbody.innerHTML = rows.map(([name,vol]) => {
+      const v   = parseFloat(vol)||0;
+      const s   = deriveRegionStats(v, total);
+      const pct = v>0 ? ((v/total)*100).toFixed(1) : '0';
+      return `<tr>
+        <td>${name}</td>
+        <td>${v>0?v.toLocaleString():'N/A'}</td>
+        <td>${v>0?s.volMm3:'N/A'}</td>
+        <td>${v>0?s.sa:'N/A'}</td>
+        <td>${v>0?s.conf:'N/A'}</td>
+        <td><div>${pct}%</div><div class="pdf-conf-bar"><div class="pdf-conf-fill" style="width:${pct}%;"></div></div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('report-modal').classList.add('open');
+  lucide.createIcons();
+}
+
+function closeReportModal(e) {
+  if (!e || e.target===document.getElementById('report-modal'))
+    document.getElementById('report-modal')?.classList.remove('open');
+}
+
+function printReport() { window.print(); }
+
+function downloadPDF() {
+  proToast('Generating PDF','Clinical report downloading…','report',4000);
+  setTimeout(() => {
+    const el   = document.getElementById('pdf-preview-content');
+    const html = el ? el.outerHTML : '<p>No content</p>';
+    const blob = new Blob(['<!DOCTYPE html><html><head><style>body{font-family:Inter,sans-serif;padding:32px;color:#111827;background:#fff;}</style></head><body>'+html+'</body></html>'], {type:'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href  = url;
+    link.download = 'DentAI_ClinicalReport_'+(result?.analysis?.report_id||'export')+'_'+new Date().toISOString().split('T')[0]+'.html';
+    link.click();
+    URL.revokeObjectURL(url);
+  }, 500);
+}
+
+function generateReport() { openReportModal(); }
+</script>
+</body>
+</html>

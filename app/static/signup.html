@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Account — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    <div class="logo">
+      <div class="logo-mark">
+        <i data-lucide="scan-face" style="width:26px;height:26px;color:#fff;"></i>
+      </div>
+      <span class="brand-name">DentAI</span>
+      <p>CBCT AI Segmentation Platform</p>
+    </div>
+
+    <h2>Create your account</h2>
+    <p class="sub">Join the platform — clinical access only</p>
+
+    <div class="alert error"   id="alert-err" role="alert"></div>
+    <div class="alert success" id="alert-ok"  role="status"></div>
+
+    <form id="signup-form" novalidate>
+      <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" placeholder="Dr. Jane Smith" autocomplete="name" required />
+      </div>
+      <div class="form-group">
+        <label for="license">License Number</label>
+        <input type="text" id="license" placeholder="MED-123456" required />
+      </div>
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="doctor@hospital.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special" autocomplete="new-password" required />
+          <span class="pw-eye" onclick="toggleEye('password','eye-icon')" title="Show / hide password" aria-label="Toggle password visibility">
+            <i data-lucide="eye" id="eye-icon" style="width:16px;height:16px;"></i>
+          </span>
+        </div>
+        <div class="pw-strength-bar"><div class="pw-strength-fill" id="pw-fill"></div></div>
+        <div class="pw-strength-text" id="pw-strength-text"></div>
+      </div>
+
+      <button class="btn-primary" type="submit" id="btn">
+        <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+        Create Account
+      </button>
+    </form>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  lucide.createIcons();
+  requireGuest();
+
+  function toggleEye(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon  = document.getElementById(iconId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+      input.type = 'password';
+      icon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+  }
+
+  document.getElementById('password').addEventListener('input', function () {
+    const v = this.value;
+    const fill = document.getElementById('pw-fill');
+    const text = document.getElementById('pw-strength-text');
+    if (!v) { fill.style.width = '0%'; text.textContent = ''; return; }
+    const checks = [v.length >= 8, /[A-Z]/.test(v), /[a-z]/.test(v), /\d/.test(v), /[@#$%^&+=!]/.test(v)];
+    const score = checks.filter(Boolean).length;
+    const labels = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
+    fill.style.width    = (score / 5 * 100) + '%';
+    fill.style.background = colors[score];
+    text.textContent    = labels[score];
+    text.style.color    = colors[score];
+  });
+
+  document.getElementById('signup-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    const err = document.getElementById('alert-err');
+    const ok  = document.getElementById('alert-ok');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Creating account…';
+    err.style.display = 'none';
+    ok.style.display  = 'none';
+
+    try {
+      const data = await postForm('/signup', {
+        name:     document.getElementById('name').value.trim(),
+        license:  document.getElementById('license').value.trim(),
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      });
+
+      if (data.success) {
+        ok.textContent   = 'Account created! Redirecting to login…';
+        ok.style.display = 'block';
+        setTimeout(() => window.location.href = '/login', 1500);
+      } else {
+        err.textContent   = data.message || 'Signup failed. Please try again.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="user-plus" style="width:16px;height:16px;"></i> Create Account';
+        lucide.createIcons();
+      }
+    } catch {
+      err.textContent   = 'Cannot reach server.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="user-plus" style="width:16px;height:16px;"></i> Create Account';
+      lucide.createIcons();
+    }
+  });
+</script>
+</body>
+</html>

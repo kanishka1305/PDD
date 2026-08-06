@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 *.egg-info/
 dist/
 build/
@@ -28,6 +30,12 @@ test-results/
 coverage.xml
 htmlcov/
 *.log
+reports/
+
+# ── App Data & Model Uploads ──────────────────────────────────────────────────
+uploads/
+results/
+models/pretrained/
 
 # ── Selenium / WebDriver cache ────────────────────────────────────────────────
 .wdm/
@@ -41,6 +49,7 @@ automation/drivers/
 *.swo
 *.sublime-project
 *.sublime-workspace
+*.iml
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store

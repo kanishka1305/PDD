@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Refine Segmentation — DentAI</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+  </button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="/dashboard">
+        <div class="brand-icon"><i data-lucide="scan-face" style="width:20px;height:20px;color:#fff;"></i></div>
+        <span class="brand-text">DentAI</span>
+      </a>
+    </div>
+    <nav>
+      <span class="nav-section-label">Main</span>
+      <a href="/dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i></span>Dashboard</a>
+      <a href="/upload"><span class="nav-icon"><i data-lucide="upload-cloud" style="width:16px;height:16px;"></i></span>Upload Scan</a>
+      <a href="/results"><span class="nav-icon"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i></span>Results</a>
+      <span class="nav-section-label">Tools</span>
+      <a href="/refine" class="active"><span class="nav-icon"><i data-lucide="scissors" style="width:16px;height:16px;"></i></span>Refine</a>
+      <a href="/workflow"><span class="nav-icon"><i data-lucide="workflow" style="width:16px;height:16px;"></i></span>Workflow</a>
+      <a href="/history"><span class="nav-icon"><i data-lucide="clock" style="width:16px;height:16px;"></i></span>History</a>
+    </nav>
+    <div class="user-info">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">D</div>
+        <div class="user-details">
+          <div class="name" id="sb-name">Doctor</div>
+          <div class="email" id="sb-email"></div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">
+        <i data-lucide="log-out" style="width:13px;height:13px;"></i>Sign out
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Refine Segmentation</h1>
+        <p>Adjust threshold and crop axes, then re-run segmentation on the selected region</p>
+      </div>
+    </div>
+
+    <!-- No scan warning -->
+    <div class="card hidden" id="no-scan-warn" style="border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.05);">
+      <div style="display:flex;align-items:center;gap:10px;color:#fca5a5;">
+        <i data-lucide="alert-triangle" style="width:18px;height:18px;flex-shrink:0;"></i>
+        <span style="font-size:13px;">No scan analysed yet. <a href="/upload" style="color:var(--accent);font-weight:600;">Upload a scan first →</a></span>
+      </div>
+    </div>
+
+    <!-- Crop & Threshold Controls -->
+    <div class="card" id="refine-controls">
+      <div class="card-header">
+        <h3>Crop &amp; Threshold Controls</h3>
+        <button class="btn-outline" onclick="resetSliders()" style="padding:7px 14px;font-size:12px;">
+          <i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i>Reset
+        </button>
+      </div>
+
+      <div class="refine-grid">
+
+        <div class="refine-section">
+          <div class="refine-label">
+            <span>Segmentation Threshold</span>
+            <span class="refine-val" id="val-threshold">0.50</span>
+          </div>
+          <input type="range" class="range-input" id="sl-threshold"
+                 min="0.1" max="0.9" step="0.01" value="0.50"
+                 oninput="syncVal('threshold')" aria-label="Segmentation threshold"/>
+          <p class="range-hint">Lower = include more tissue &nbsp;·&nbsp; Higher = bone only</p>
+        </div>
+
+        <div class="refine-section">
+          <div class="refine-label">
+            <span>Z-Axis (Slices)</span>
+            <span class="refine-val" id="val-z">0 – 100%</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="range" class="range-input" id="sl-zmin" min="0" max="100" step="1" value="0"   oninput="syncRange('z')" aria-label="Z axis minimum"/>
+            <input type="range" class="range-input" id="sl-zmax" min="0" max="100" step="1" value="100" oninput="syncRange('z')" aria-label="Z axis maximum"/>
+          </div>
+          <p class="range-hint">Coronal crop — remove top / bottom slices</p>
+        </div>
+
+        <div class="refine-section">
+          <div class="refine-label">
+            <span>Y-Axis (Rows)</span>
+            <span class="refine-val" id="val-y">0 – 100%</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="range" class="range-input" id="sl-ymin" min="0" max="100" step="1" value="0"   oninput="syncRange('y')" aria-label="Y axis minimum"/>
+            <input type="range" class="range-input" id="sl-ymax" min="0" max="100" step="1" value="100" oninput="syncRange('y')" aria-label="Y axis maximum"/>
+          </div>
+          <p class="range-hint">Sagittal crop — anterior / posterior trim</p>
+        </div>
+
+        <div class="refine-section">
+          <div class="refine-label">
+            <span>X-Axis (Columns)</span>
+            <span class="refine-val" id="val-x">0 – 100%</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="range" class="range-input" id="sl-xmin" min="0" max="100" step="1" value="0"   oninput="syncRange('x')" aria-label="X axis minimum"/>
+            <input type="range" class="range-input" id="sl-xmax" min="0" max="100" step="1" value="100" oninput="syncRange('x')" aria-label="X axis maximum"/>
+          </div>
+          <p class="range-hint">Axial crop — left / right jaw trim</p>
+        </div>
+
+      </div>
+
+      <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-primary" id="btn-refine" onclick="runRefinement()" style="width:auto;padding:12px 28px;">
+          <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i>Apply Refinement
+        </button>
+      </div>
+
+      <div class="progress-wrap" id="refine-progress">
+        <div class="progress-label">
+          <span id="refine-label">Refining…</span>
+          <span id="refine-pct"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="refine-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Refined Volume Results -->
+    <div class="card hidden" id="refine-results">
+      <div class="card-header">
+        <h3>Refined Region Volumes</h3>
+        <span class="badge low">Updated</span>
+      </div>
+      <div class="region-grid" id="refined-region-grid"></div>
+    </div>
+
+    <!-- Per-Region Export -->
+    <div class="card" id="export-card">
+      <div class="card-header">
+        <h3>Export Segmented Regions</h3>
+      </div>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;margin-top:-8px;">
+        Download individual anatomical regions as STL (3D printing / planning) or DICOM (imaging systems).
+      </p>
+
+      <div class="export-table">
+        <div class="export-header">
+          <span>Region</span>
+          <span>STL</span>
+          <span>DICOM</span>
+          <span>Description</span>
+        </div>
+
+        <div class="export-row">
+          <span class="region-dot condyles-dot">
+            <i data-lucide="circle" style="width:8px;height:8px;fill:#3b82f6;"></i>Condyles
+          </span>
+          <button class="btn-export stl" onclick="dlStl('condyles')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>STL
+          </button>
+          <button class="btn-export dcm" onclick="dlDcm('condyles')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DCM
+          </button>
+          <span class="export-desc">Articulating heads of the mandible</span>
+        </div>
+
+        <div class="export-row">
+          <span class="region-dot ramus-dot">
+            <i data-lucide="circle" style="width:8px;height:8px;fill:#06b6d4;"></i>Ramus
+          </span>
+          <button class="btn-export stl" onclick="dlStl('ramus')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>STL
+          </button>
+          <button class="btn-export dcm" onclick="dlDcm('ramus')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DCM
+          </button>
+          <span class="export-desc">Vertical ascending part of jaw</span>
+        </div>
+
+        <div class="export-row">
+          <span class="region-dot para-dot">
+            <i data-lucide="circle" style="width:8px;height:8px;fill:#8b5cf6;"></i>Parasymphysis
+          </span>
+          <button class="btn-export stl" onclick="dlStl('parasymphysis')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>STL
+          </button>
+          <button class="btn-export dcm" onclick="dlDcm('parasymphysis')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DCM
+          </button>
+          <span class="export-desc">Lateral body of lower jaw (both sides)</span>
+        </div>
+
+        <div class="export-row">
+          <span class="region-dot sym-dot">
+            <i data-lucide="circle" style="width:8px;height:8px;fill:#22c55e;"></i>Symphysis
+          </span>
+          <button class="btn-export stl" onclick="dlStl('symphysis')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>STL
+          </button>
+          <button class="btn-export dcm" onclick="dlDcm('symphysis')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DCM
+          </button>
+          <span class="export-desc">Central chin region of the mandible</span>
+        </div>
+
+        <div class="export-row">
+          <span class="region-dot full-dot">
+            <i data-lucide="circle" style="width:8px;height:8px;fill:#f59e0b;"></i>Full Mandible
+          </span>
+          <button class="btn-export stl" onclick="dlStl('full')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>STL
+          </button>
+          <button class="btn-export dcm" onclick="dlDcm('full')">
+            <i data-lucide="download" style="width:10px;height:10px;"></i>DCM
+          </button>
+          <span class="export-desc">Complete mandible segmentation mask</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast" class="toast">
+  <span class="toast-dot"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script>
+  lucide.createIcons();
+  requireAuth();
+  populateSidebar();
+
+  const u = store.get('user');
+  if (u) { const av = document.getElementById('user-avatar'); if (av) av.textContent = u.name.charAt(0).toUpperCase(); }
+
+  document.getElementById('menu-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('open');
+  });
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  });
+
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    const dot = el.querySelector('.toast-dot');
+    document.getElementById('toast-msg').textContent = msg;
+    el.className = 'toast ' + type + ' show';
+    if (dot) dot.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--accent)';
+    setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  const result = store.get('lastResult');
+  const scanId = result?.scan_id ?? null;
+
+  if (!scanId) {
+    document.getElementById('no-scan-warn').classList.remove('hidden');
+    document.getElementById('refine-controls').style.opacity = '0.45';
+    document.getElementById('refine-controls').style.pointerEvents = 'none';
+    document.getElementById('export-card').style.opacity = '0.45';
+    document.getElementById('export-card').style.pointerEvents = 'none';
+  }
+
+  function syncVal(axis) {
+    document.getElementById('val-' + axis).textContent =
+      parseFloat(document.getElementById('sl-' + axis).value).toFixed(2);
+  }
+  function syncRange(axis) {
+    const mn = document.getElementById('sl-' + axis + 'min').value;
+    const mx = document.getElementById('sl-' + axis + 'max').value;
+    document.getElementById('val-' + axis).textContent = mn + '% – ' + mx + '%';
+  }
+  function resetSliders() {
+    ['zmin','zmax','ymin','ymax','xmin','xmax'].forEach(id => {
+      document.getElementById('sl-' + id).value = id.endsWith('min') ? 0 : 100;
+    });
+    document.getElementById('sl-threshold').value = 0.50;
+    ['z','y','x'].forEach(a => syncRange(a));
+    syncVal('threshold');
+    toast('Sliders reset to defaults', 'info');
+  }
+
+  async function runRefinement() {
+    if (!scanId) { toast('Upload and analyse a scan first', 'error'); return; }
+    const btn = document.getElementById('btn-refine');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Refining…';
+
+    const prog = document.getElementById('refine-progress');
+    const fill = document.getElementById('refine-fill');
+    const pct  = document.getElementById('refine-pct');
+    prog.style.display = 'block';
+
+    let p = 0;
+    const ticker = setInterval(() => { p = Math.min(p + 12, 88); fill.style.width = p + '%'; pct.textContent = p + '%'; }, 300);
+
+    const shape = result?.analysis?.volume_shape ?? [100, 512, 512];
+    const pct2idx = (pctVal, dim) => Math.round(parseFloat(pctVal) / 100 * shape[dim]);
+
+    const body = {
+      threshold: parseFloat(document.getElementById('sl-threshold').value),
+      z_min: pct2idx(document.getElementById('sl-zmin').value, 0),
+      z_max: pct2idx(document.getElementById('sl-zmax').value, 0),
+      y_min: pct2idx(document.getElementById('sl-ymin').value, 1),
+      y_max: pct2idx(document.getElementById('sl-ymax').value, 1),
+      x_min: pct2idx(document.getElementById('sl-xmin').value, 2),
+      x_max: pct2idx(document.getElementById('sl-xmax').value, 2),
+    };
+
+    try {
+      const data = await fetch('/refine/' + scanId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => r.json());
+
+      clearInterval(ticker);
+      fill.style.width = '100%'; pct.textContent = '100%';
+
+      if (data.error) { toast('Refinement error: ' + data.error, 'error'); }
+      else { toast('Refinement complete!', 'success'); showRefinedVolumes(data.volumes); }
+    } catch (e) {
+      clearInterval(ticker);
+      toast('Failed: ' + e.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="refresh-cw" style="width:15px;height:15px;"></i>Apply Refinement';
+    lucide.createIcons();
+  }
+
+  function showRefinedVolumes(vols) {
+    const colors = { condyles:'#3b82f6', ramus:'#06b6d4', parasymphysis:'#8b5cf6', symphysis:'#22c55e', full:'#f59e0b' };
+    const grid = document.getElementById('refined-region-grid');
+    grid.innerHTML = Object.entries(vols).map(([k, v]) => `
+      <div class="region-card" style="border-color:${colors[k] || 'var(--border)'}33;">
+        <div class="rname">${k.charAt(0).toUpperCase() + k.slice(1)}</div>
+        <div class="rval" style="color:${colors[k] || 'var(--text-primary)'}">${parseFloat(v).toFixed(0)}</div>
+        <div class="runit">voxels</div>
+      </div>`).join('');
+    document.getElementById('refine-results').classList.remove('hidden');
+  }
+
+  function dlStl(region) {
+    if (!scanId) { toast('No scan available', 'error'); return; }
+    toast('Generating STL for ' + region + '…', 'success');
+    window.open('/stl-region/' + scanId + '/' + region, '_blank');
+  }
+  function dlDcm(region) {
+    if (!scanId) { toast('No scan available', 'error'); return; }
+    toast('Generating DICOM for ' + region + '…', 'success');
+    window.open('/export-dicom/' + scanId + '/' + region, '_blank');
+  }
+</script>
+</body>
+</html>
