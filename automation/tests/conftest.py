@@ -37,6 +37,39 @@ def _append_result(entry: dict) -> None:
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+@pytest.fixture(scope="session", autouse=True)
+def ensure_http_server():
+    """Ensure a local HTTP server is running if BASE_URL points to localhost/127.0.0.1."""
+    import urllib.parse
+    import socket
+    import http.server
+    import threading
+    import time
+    from automation.config.settings import BASE_URL
+
+    parsed = urllib.parse.urlparse(BASE_URL)
+    if parsed.hostname in ("localhost", "127.0.0.1"):
+        port = parsed.port or 8000
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        res = sock.connect_ex((parsed.hostname, port))
+        sock.close()
+        if res != 0:
+            static_dir = Path(__file__).parent.parent.parent / "Dental (1)" / "Dental" / "app" / "static"
+            if static_dir.exists():
+                class QuietHandler(http.server.SimpleHTTPRequestHandler):
+                    def __init__(self, *args, **kwargs):
+                        super().__init__(*args, directory=str(static_dir), **kwargs)
+                    def log_message(self, format, *args):
+                        pass
+
+                httpd = http.server.HTTPServer((parsed.hostname, port), QuietHandler)
+                t = threading.Thread(target=httpd.serve_forever, daemon=True)
+                t.start()
+                time.sleep(0.5)
+                log.info("Started local HTTP static server on %s:%d serving %s", parsed.hostname, port, static_dir)
+
+
 @pytest.fixture(scope="session")
 def results_store():
     """Return the shared results list for this process/worker."""

@@ -41,7 +41,7 @@ WINDOW_WIDTH      = int(os.environ.get("WINDOW_WIDTH",  "1920"))
 WINDOW_HEIGHT     = int(os.environ.get("WINDOW_HEIGHT", "1080"))
 
 # ── Timeouts (seconds) ────────────────────────────────────────────────────────
-IMPLICIT_WAIT     = int(os.environ.get("IMPLICIT_WAIT",     "5"))
+IMPLICIT_WAIT     = int(os.environ.get("IMPLICIT_WAIT",     "0"))
 EXPLICIT_WAIT     = int(os.environ.get("EXPLICIT_WAIT",     "20"))
 PAGE_LOAD_TIMEOUT = int(os.environ.get("PAGE_LOAD_TIMEOUT", "30"))
 

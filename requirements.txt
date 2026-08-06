@@ -1,0 +1,17 @@
+# ── Selenium & WebDriver ──────────────────────────────────────────────────────
+selenium==4.27.1
+webdriver-manager==4.0.2
+
+# ── pytest core ───────────────────────────────────────────────────────────────
+pytest==8.3.5
+pytest-html==4.1.1          # self-contained HTML execution reports
+pytest-xdist==3.6.1         # parallel execution: python -m pytest -n auto
+pytest-timeout==2.3.1       # per-test timeout (see timeout = 60 in pytest.ini)
+pytest-rerunfailures==13.0  # 13.x is the last version compatible with pytest 8.x + xdist
+
+# ── Report generation ─────────────────────────────────────────────────────────
+openpyxl==3.1.5             # Excel .xlsx report generation (ARGB colors required)
+
+# ── HTTP / environment ────────────────────────────────────────────────────────
+requests==2.32.3
+python-dotenv==1.1.1

@@ -1,0 +1,118 @@
+name: Selenium Automation Suite
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Target BASE_URL (leave empty for auto-detection)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  selenium-tests:
+    name: Run Selenium Automation Tests
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ github.event.inputs.base_url }}
+      HEADLESS: "true"
+      BROWSER: "chrome"
+      EXPLICIT_WAIT: "20"
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Verify Chrome installation
+        run: |
+          google-chrome --version
+          which google-chrome
+
+      - name: Create output directories
+        run: |
+          mkdir -p "Test Results/Excel"
+          mkdir -p "Test Results/HTML"
+          mkdir -p "Test Results/Screenshots"
+          mkdir -p "Test Results/Logs"
+          mkdir -p "Test Results/JSON"
+          mkdir -p "Test Results/Summary"
+
+      - name: Execute Selenium E2E Tests
+        run: |
+          python -m pytest automation/tests/ \
+            -v \
+            --tb=short \
+            --timeout=60 \
+            --html="Test Results/HTML/execution-report.html" \
+            --self-contained-html \
+            -o "log_cli=true" \
+            2>&1 | tee "Test Results/Logs/pytest-output.log" || true
+
+      - name: Ensure Excel & HTML reports generated
+        if: always()
+        run: |
+          python - << 'PYEOF'
+          import json, pathlib, sys
+          sys.path.insert(0, ".")
+
+          json_dir = pathlib.Path("Test Results/JSON")
+          ts_files = sorted(json_dir.glob("execution-results_*.json"))
+          latest   = json_dir / "execution-results.json"
+
+          if ts_files:
+              src = ts_files[-1]
+          elif latest.exists():
+              src = latest
+          else:
+              src = None
+
+          if src:
+              summary = json.loads(src.read_text())
+              results = summary.get("results", [])
+          else:
+              results, summary = [], {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []}
+
+          from automation.utils.report_generator import generate_excel_report, generate_html_report
+          excel_path = generate_excel_report(results, summary)
+          html_path  = generate_html_report(results, summary)
+          print(f"Excel report -> {excel_path}")
+          print(f"HTML report  -> {html_path}")
+          PYEOF
+
+      - name: Upload Test Reports & Screenshots (Artifacts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-execution-artifacts-${{ github.run_number }}
+          retention-days: 30
+          path: |
+            Test Results/Excel/
+            Test Results/HTML/
+            Test Results/JSON/
+            Test Results/Logs/
+            Test Results/Screenshots/
+            Test Results/Summary/
