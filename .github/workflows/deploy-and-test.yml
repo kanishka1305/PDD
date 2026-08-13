@@ -176,7 +176,9 @@ jobs:
 
       - name: Verify Chrome installation
         run: |
-          google-chrome --version
+          CHROME_VER=$(google-chrome --version | awk '{print $NF}')
+          echo "CHROME_VERSION=$CHROME_VER" >> $GITHUB_ENV
+          echo "Chrome: $CHROME_VER"
           which google-chrome
 
       - name: Create result directories
@@ -194,18 +196,20 @@ jobs:
 
       - name: Run Selenium E2E tests (parallel)
         run: |
+          set -o pipefail
           python -m pytest automation/tests/ \
             -v \
-            --tb=short \
+            --tb=long \
             --timeout=60 \
-            -n auto \
+            --dist=no \
             --html="Test Results/HTML/execution-report.html" \
             --self-contained-html \
             -o "log_cli=true" \
-            2>&1 | tee "Test Results/Logs/pytest-output.log" || true
-        # NOTE: --reruns is intentionally NOT used with -n auto.
-        # pytest-rerunfailures is incompatible with xdist distributed mode.
-        # If you need reruns, replace -n auto with --dist=no --reruns=2.
+            2>&1 | tee "Test Results/Logs/pytest-output.log"
+        # pipefail ensures pytest exit code propagates through tee.
+        # --dist=no is required so the per-test Excel plugin's module-level
+        # _ALL_RECORDS list accumulates correctly (xdist workers use separate
+        # processes and cannot share the in-memory list).
 
       - name: Upload JSON + raw test output for report job
         if: always()

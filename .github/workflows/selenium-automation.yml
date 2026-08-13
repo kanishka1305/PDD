@@ -1,5 +1,6 @@
-name: Selenium Automation Suite
+name: Selenium Automation Suite — DentAI
 
+# ── Triggers ──────────────────────────────────────────────────────────────────
 on:
   push:
     branches: ["*"]
@@ -8,50 +9,76 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Target BASE_URL (leave empty for auto-detection)"
+        description: "Target BASE_URL (leave empty for auto GitHub Pages URL)"
         required: false
         default: ""
 
+# ── Permissions ───────────────────────────────────────────────────────────────
 permissions:
   contents: read
-  actions: read
+  actions:  read
+  checks:   write
+
+# ── Concurrency ───────────────────────────────────────────────────────────────
+# Allow parallel runs on different branches; cancel redundant runs on same branch
+concurrency:
+  group: selenium-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB: Run Selenium tests + generate per-test Excel + overall report
+  # ════════════════════════════════════════════════════════════════════════════
   selenium-tests:
-    name: Run Selenium Automation Tests
+    name: "Selenium E2E + Excel Reports"
     runs-on: ubuntu-latest
+
     env:
-      BASE_URL: ${{ github.event.inputs.base_url }}
-      HEADLESS: "true"
-      BROWSER: "chrome"
+      # BASE_URL resolution:
+      #   1. Manual workflow_dispatch input
+      #   2. GITHUB_REPOSITORY → constructs Pages URL automatically
+      BASE_URL:      ${{ github.event.inputs.base_url || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+      HEADLESS:      "true"
+      BROWSER:       "chrome"
       EXPLICIT_WAIT: "20"
-      PYTHONPATH: ${{ github.workspace }}
+      PYTHONPATH:    ${{ github.workspace }}
 
     steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # ── 2. Python ───────────────────────────────────────────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
+      # ── 3. Dependencies ─────────────────────────────────────────────────────
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-test.txt
 
-      - name: Install Google Chrome
+      # ── 4. Chrome ───────────────────────────────────────────────────────────
+      - name: Install Google Chrome (stable)
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
 
-      - name: Verify Chrome installation
+      - name: Verify Chrome + capture version for Excel report
         run: |
-          google-chrome --version
+          CHROME_VER=$(google-chrome --version | awk '{print $NF}')
+          echo "CHROME_VERSION=$CHROME_VER" >> $GITHUB_ENV
+          echo "Chrome version: $CHROME_VER"
           which google-chrome
 
+      # ── 5. Create ALL output directories ────────────────────────────────────
+      #    Both legacy "Test Results/" and new "reports/" paths must exist
+      #    BEFORE pytest starts (pytest.ini log_file path is resolved at startup)
       - name: Create output directories
         run: |
           mkdir -p "Test Results/Excel"
@@ -60,20 +87,55 @@ jobs:
           mkdir -p "Test Results/Logs"
           mkdir -p "Test Results/JSON"
           mkdir -p "Test Results/Summary"
+          mkdir -p "reports/excel"
+          mkdir -p "reports/screenshots"
+          mkdir -p "reports/html"
+          mkdir -p "reports/logs"
 
-      - name: Execute Selenium E2E Tests
+      # ── 6. Run Selenium tests ────────────────────────────────────────────────
+      # IMPORTANT design decisions:
+      #
+      # a) --dist=no  (no xdist parallelism)
+      #    The per-test Excel plugin accumulates results in a module-level list
+      #    (_ALL_RECORDS). When pytest-xdist spawns separate worker *processes*,
+      #    each worker has its own memory space so _ALL_RECORDS in the controller
+      #    stays empty. Running single-process ensures every test's record is
+      #    captured and the overall_test_report.xlsx is complete.
+      #
+      # b) Exit code preserved (no || true)
+      #    The tee command captures output for the log file. The pipeline exit
+      #    code comes from pytest so GitHub Actions shows FAIL when tests fail.
+      #    Use `|| true` ONLY on the tee subshell, not on the pytest command.
+      #
+      # c) --tb=long
+      #    Full tracebacks are written to the Excel "Error Message" column.
+      #    --tb=short truncates errors and makes the Excel reports less useful.
+      - name: Run Selenium E2E tests
         run: |
+          set -o pipefail
           python -m pytest automation/tests/ \
             -v \
-            --tb=short \
+            --tb=long \
             --timeout=60 \
+            --dist=no \
             --html="Test Results/HTML/execution-report.html" \
             --self-contained-html \
             -o "log_cli=true" \
-            2>&1 | tee "Test Results/Logs/pytest-output.log" || true
+            2>&1 | tee "Test Results/Logs/pytest-output.log"
+        # Exit code comes from pytest via pipefail:
+        #   0  = all tests passed
+        #   1  = some tests failed   ← GitHub Actions marks job FAILED (correct)
+        #   2  = pytest internal error
+        # This is intentional — do NOT add || true here.
 
-      - name: Ensure Excel & HTML reports generated
-        if: always()
+      # ── 7. Generate legacy Excel + HTML reports (Test Results/ path) ────────
+      #    The plugin already wrote reports/excel/*.xlsx during the test run.
+      #    This step generates the "Test Results/Excel/" reports used by the
+      #    deploy-and-test.yml pipeline (separate concern, backwards-compat).
+      - name: Generate legacy Excel + HTML summary reports
+        if: always()   # must run even when tests failed
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python - << 'PYEOF'
           import json, pathlib, sys
@@ -91,28 +153,133 @@ jobs:
               src = None
 
           if src:
-              summary = json.loads(src.read_text())
+              summary = json.loads(src.read_text(encoding="utf-8"))
               results = summary.get("results", [])
+              print(f"Loaded {len(results)} results from {src.name}")
           else:
-              results, summary = [], {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []}
+              results = []
+              summary = {"total": 0, "passed": 0, "failed": 0,
+                         "skipped": 0, "results": []}
+              print("No JSON results found — generating empty legacy report")
 
-          from automation.utils.report_generator import generate_excel_report, generate_html_report
+          from automation.utils.report_generator import (
+              generate_excel_report, generate_html_report
+          )
           excel_path = generate_excel_report(results, summary)
           html_path  = generate_html_report(results, summary)
-          print(f"Excel report -> {excel_path}")
-          print(f"HTML report  -> {html_path}")
+          print(f"Legacy Excel  -> {excel_path}")
+          print(f"Legacy HTML   -> {html_path}")
+
+          # List everything in reports/excel/ (written by plugin during tests)
+          per_test_dir = pathlib.Path("reports/excel")
+          per_test_files = sorted(per_test_dir.glob("*.xlsx"))
+          print(f"\nPer-test reports: {len(per_test_files)} files in reports/excel/")
+          for f in per_test_files[:10]:   # show first 10
+              print(f"  {f.name}  ({f.stat().st_size:,} bytes)")
+          if len(per_test_files) > 10:
+              print(f"  ... and {len(per_test_files)-10} more")
           PYEOF
 
-      - name: Upload Test Reports & Screenshots (Artifacts)
+      # ── 8. Generate GitHub Actions step summary ──────────────────────────────
+      - name: Publish step summary
+        if: always()
+        env:
+          GH_RUN: ${{ github.run_number }}
+          GH_SHA: ${{ github.sha }}
+        run: |
+          python - << 'PYEOF'
+          import json, os, pathlib
+
+          json_dir  = pathlib.Path("Test Results/JSON")
+          src_files = sorted(json_dir.glob("execution-results*.json"))
+          s = json.loads(src_files[-1].read_text()) if src_files else {
+              "total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []
+          }
+
+          total, passed, failed = (
+              s.get("total",0), s.get("passed",0), s.get("failed",0)
+          )
+          rate  = f"{passed/total*100:.1f}" if total else "0"
+          run   = os.environ.get("GH_RUN", "?")
+          sha   = os.environ.get("GH_SHA", "?")[:8]
+
+          per_test = sorted(pathlib.Path("reports/excel").glob("*.xlsx"))
+          n_individual = len([f for f in per_test if f.name != "overall_test_report.xlsx"])
+
+          failed_rows = "".join(
+              f"| `{r.get('test_id','')[:50]}` "
+              f"| {r.get('name','')[:40]} "
+              f"| {r.get('failure_reason','')[:60]} |\n"
+              for r in s.get("results", [])
+              if r.get("status") == "FAIL"
+          )
+
+          summary = f"""## DentAI — Selenium Automation Results
+
+**Run:** #{run}  **Commit:** {sha}
+
+| Metric | Value |
+|--------|-------|
+| Total Tests  | {total}   |
+| Passed  | {passed}  |
+| Failed  | {failed}  |
+| Skipped | {s.get("skipped", 0)} |
+| Pass Rate | {rate}% |
+
+## Excel Reports Generated
+
+| Artifact | Contents | Retention |
+|----------|----------|-----------|
+| `per-test-excel-reports-{run}` | {n_individual} individual test .xlsx files | 90 days |
+| `selenium-test-results-{run}`  | overall_test_report.xlsx + all raw output | 30 days |
+
+## Download Instructions
+
+1. Scroll to the **Artifacts** section at the bottom of this page
+2. Download `per-test-excel-reports-{run}` for individual test reports
+3. Download `selenium-test-results-{run}` for the full bundle including `overall_test_report.xlsx`
+
+"""
+          if failed_rows:
+              summary += f"""## Failed Tests
+
+| Test ID | Test Name | Reason |
+|---------|-----------|--------|
+{failed_rows}
+"""
+          else:
+              summary += "\n**All tests passed!**\n"
+
+          pathlib.Path("Test Results/Summary/summary.md").write_text(summary)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+              f.write(summary)
+          PYEOF
+
+      # ── 9. Upload per-test Excel reports (primary artifact — 90 days) ────────
+      - name: "Upload per-test Excel reports"
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: selenium-execution-artifacts-${{ github.run_number }}
+          name: per-test-excel-reports-${{ github.run_number }}
+          retention-days: 90
+          path: |
+            reports/excel/
+
+      # ── 10. Upload full test bundle (all output — 30 days) ───────────────────
+      - name: "Upload full test bundle"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-results-${{ github.run_number }}
           retention-days: 30
           path: |
+            reports/excel/
+            reports/screenshots/
+            reports/html/
+            reports/logs/
             Test Results/Excel/
             Test Results/HTML/
-            Test Results/JSON/
-            Test Results/Logs/
             Test Results/Screenshots/
+            Test Results/Logs/
+            Test Results/JSON/
             Test Results/Summary/
