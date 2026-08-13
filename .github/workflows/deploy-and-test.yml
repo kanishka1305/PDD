@@ -187,6 +187,10 @@ jobs:
           mkdir -p "Test Results/Logs"
           mkdir -p "Test Results/JSON"
           mkdir -p "Test Results/Summary"
+          mkdir -p "reports/excel"
+          mkdir -p "reports/screenshots"
+          mkdir -p "reports/html"
+          mkdir -p "reports/logs"
 
       - name: Run Selenium E2E tests (parallel)
         run: |
@@ -214,6 +218,17 @@ jobs:
             Test Results/Screenshots/
             Test Results/Logs/
             Test Results/HTML/
+            reports/excel/
+            reports/screenshots/
+
+      - name: "Upload per-test Excel reports (per-test .xlsx — 90 days)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: per-test-excel-reports-${{ github.run_number }}
+          retention-days: 90
+          path: |
+            reports/excel/
 
   # ══════════════════════════════════════════════════════════════════════════
   # JOB 5 — Generate Excel report
@@ -249,6 +264,8 @@ jobs:
           mkdir -p "Test Results/Summary"
           mkdir -p "Test Results/Screenshots"
           mkdir -p "Test Results/Logs"
+          mkdir -p "reports/excel"
+          mkdir -p "reports/screenshots"
 
       - name: Download JSON results (if e2e-tests ran)
         uses: actions/download-artifact@v4
@@ -410,9 +427,12 @@ jobs:
 
       - name: Generate execution summary
         if: always()
+        env:
+          GH_SHA: ${{ github.sha }}
+          GH_BRANCH: ${{ github.ref_name }}
         run: |
           python - << 'PYEOF'
-          import json, pathlib
+          import json, os, pathlib
           json_dir  = pathlib.Path("Test Results/JSON")
           src_files = sorted(json_dir.glob("execution-results*.json"))
           s = json.loads(src_files[-1].read_text()) if src_files else {
@@ -423,14 +443,18 @@ jobs:
               s.get("failed",0), s.get("skipped",0)
           )
           rate = f"{passed/total*100:.1f}" if total else "0"
+          sha    = os.environ.get("GH_SHA",    "unknown")
+          branch = os.environ.get("GH_BRANCH", "unknown")
+          # Collect failed rows (limit to 25 rows, not 25 chars)
+          failed_results = [r for r in s.get("results", []) if r.get("status") == "FAIL"]
           fail_rows = "".join(
               f"| {r.get('test_id','')[:55]} | {r.get('name','')[:45]} "
               f"| {r.get('failure_reason','')[:75]} |\n"
-              for r in s.get("results", []) if r.get("status") == "FAIL"
-          )[:25]
+              for r in failed_results[:25]
+          )
           md = (
               f"# DentAI — E2E Execution Summary\n\n"
-              f"**Build:** ${{ github.sha }}  **Branch:** ${{ github.ref_name }}\n\n"
+              f"**Build:** {sha}  **Branch:** {branch}\n\n"
               f"## Results\n\n"
               f"| Metric | Value |\n|--------|-------|\n"
               f"| Total   | {total}   |\n"
@@ -471,6 +495,8 @@ jobs:
             Test Results/Logs/
             Test Results/JSON/
             Test Results/Summary/
+            reports/excel/
+            reports/screenshots/
 
       # ── Publish summary to the GitHub Actions run page ────────────────────
       - name: Publish step summary
