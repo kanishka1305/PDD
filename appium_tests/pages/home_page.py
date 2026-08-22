@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Home / Dashboard Page Object
 =============================================
 Locators verified against:  DentAI-Mobile/src/screens/DashboardScreen.tsx
@@ -18,8 +18,8 @@ UI elements:
 
 import logging
 
-from appium.pages.base_page import BasePage
-from appium.utils.test_data import UIText
+from appium_tests.pages.base_page import BasePage
+from appium_tests.utils.test_data import UIText
 
 logger = logging.getLogger(__name__)
 

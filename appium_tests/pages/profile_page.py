@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Profile Page Object (includes Logout)
 =======================================================
 Locators verified against:  DentAI-Mobile/src/screens/ProfileScreen.tsx
@@ -25,11 +25,11 @@ UI elements:
 import logging
 import time
 
-from appium.webdriver.common.appiumby import AppiumBy
+from appium_tests.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support import expected_conditions as EC
 
-from appium.pages.base_page import BasePage
-from appium.utils.test_data import UIText
+from appium_tests.pages.base_page import BasePage
+from appium_tests.utils.test_data import UIText
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +152,7 @@ class ProfilePage(BasePage):
         try:
             # Find the Sign Out button in the dialog
             # Android Alert renders with android.widget.Button elements
-            from appium.webdriver.common.appiumby import AppiumBy
+            from appium_tests.webdriver.common.appiumby import AppiumBy
             btns = self.driver.find_elements(
                 AppiumBy.CLASS_NAME, "android.widget.Button"
             )

@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Base Page
 ==========================
 All page objects inherit from BasePage.
@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from appium.webdriver.common.appiumby import AppiumBy
+from appium_tests.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import (
     NoSuchElementException,
     TimeoutException,
@@ -25,7 +25,7 @@ from selenium.common.exceptions import (
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from appium.config.config import (
+from appium_tests.config.config import (
     EXPLICIT_WAIT,
     PAGE_LOAD_WAIT,
     SCREENSHOTS_DIR,
@@ -252,7 +252,7 @@ class BasePage:
     def reset_app(self) -> None:
         """Terminate and relaunch the app (equivalent to fresh start)."""
         try:
-            from appium.config.config import APP_PACKAGE
+            from appium_tests.config.config import APP_PACKAGE
             self.driver.terminate_app(APP_PACKAGE)
             time.sleep(1)
             self.driver.activate_app(APP_PACKAGE)

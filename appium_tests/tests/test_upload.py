@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Upload Tests
 ================================
 TC-APP-007  File Upload (DICOM)
@@ -7,9 +7,9 @@ TC-APP-008  DICOM Validation (format badges and metadata)
 
 import pytest
 
-from appium.pages.home_page import HomePage
-from appium.pages.upload_page import UploadPage
-from appium.utils.test_data import UIText
+from appium_tests.pages.home_page import HomePage
+from appium_tests.pages.upload_page import UploadPage
+from appium_tests.utils.test_data import UIText
 
 
 class TestUpload:

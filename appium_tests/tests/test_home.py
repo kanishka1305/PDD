@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Home / Dashboard Tests
 =======================================
 TC-APP-005  Home Screen Verification
@@ -6,8 +6,8 @@ TC-APP-005  Home Screen Verification
 
 import pytest
 
-from appium.pages.home_page import HomePage
-from appium.utils.test_data import UIText
+from appium_tests.pages.home_page import HomePage
+from appium_tests.utils.test_data import UIText
 
 
 class TestHome:

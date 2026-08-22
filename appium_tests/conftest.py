@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Root conftest.py
 ==================================
 Provides:
@@ -17,10 +17,10 @@ from typing import Generator
 
 import pytest
 
-from appium.utils.driver_factory import create_driver, quit_driver
-from appium.utils.logger import setup_logger
-from appium.config.config import SCREENSHOTS_DIR
-from appium.utils.test_data import DEVICE_NAME, PLATFORM_VERSION
+from appium_tests.utils.driver_factory import create_driver, quit_driver
+from appium_tests.utils.logger import setup_logger
+from appium_tests.config.config import SCREENSHOTS_DIR
+from appium_tests.utils.test_data import DEVICE_NAME, PLATFORM_VERSION
 
 logger = setup_logger("dentai_appium.conftest")
 
@@ -73,9 +73,9 @@ def authenticated_driver(driver):
     Driver fixture that performs login before yielding.
     Use for tests that require an authenticated session.
     """
-    from appium.pages.login_page import LoginPage
-    from appium.pages.home_page import HomePage
-    from appium.utils.test_data import VALID_EMAIL, VALID_PASSWORD
+    from appium_tests.pages.login_page import LoginPage
+    from appium_tests.pages.home_page import HomePage
+    from appium_tests.utils.test_data import VALID_EMAIL, VALID_PASSWORD
 
     login_page = LoginPage(driver)
     home_page  = HomePage(driver)
@@ -184,7 +184,7 @@ def pytest_sessionfinish(session, exitstatus):
         return
 
     try:
-        from appium.utils.excel_report import generate_reports
+        from appium_tests.utils.excel_report import generate_reports
         excel_path, html_path = generate_reports(_ALL_RESULTS)
         print(f"\n{'='*60}")
         print(f"  APPIUM E2E REPORT GENERATED")

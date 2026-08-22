@@ -2,8 +2,8 @@
 # Install with: pip install -r appium/requirements.txt
 
 # ── Appium ────────────────────────────────────────────────────────────────────
-Appium-Python-Client==4.3.1     # Appium Python client (Appium 2.x compatible)
-selenium==4.25.0                # WebDriver base (required by Appium client)
+Appium-Python-Client==4.3.0     # Appium Python client (Appium 2.x compatible)
+selenium>=4.26.0                # WebDriver base (required by Appium client)
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 pytest==8.3.3                   # Test runner

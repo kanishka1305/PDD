@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Login Tests
 ================================
 TC-APP-001  Application Launch
@@ -8,9 +8,9 @@ TC-APP-004  Invalid Login Validation
 
 import pytest
 
-from appium.pages.login_page import LoginPage
-from appium.pages.home_page import HomePage
-from appium.utils.test_data import (
+from appium_tests.pages.login_page import LoginPage
+from appium_tests.pages.home_page import HomePage
+from appium_tests.utils.test_data import (
     UIText,
     VALID_EMAIL, VALID_PASSWORD,
     INVALID_EMAIL, INVALID_PASSWORD,

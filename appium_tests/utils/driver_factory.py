@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Driver Factory
 ================================
 Creates and configures the Appium WebDriver session.
@@ -7,10 +7,10 @@ Supports real Android device and emulator.
 
 import logging
 from appium import webdriver
-from appium.options import AppiumOptions
-from appium.webdriver.appium_service import AppiumService
+from appium_tests.options import AppiumOptions
+from appium_tests.webdriver.appium_service import AppiumService
 
-from appium.config.config import (
+from appium_tests.config.config import (
     APPIUM_SERVER_URL,
     IMPLICIT_WAIT,
     get_capabilities,

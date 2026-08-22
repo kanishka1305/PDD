@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Logger
 ========================
 Structured logging for the Appium test suite.
@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from appium.config.config import LOGS_DIR
+from appium_tests.config.config import LOGS_DIR
 
 
 def setup_logger(name: str = "dentai_appium") -> logging.Logger:

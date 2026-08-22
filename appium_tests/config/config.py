@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Appium Configuration
 =====================================
 All capabilities read from environment variables.
@@ -71,7 +71,7 @@ TEST_LICENSE: str  = os.environ.get("TEST_LICENSE",  "AT-000001")
 # Set DICOM_FILE_PATH env var to point at your test file
 DICOM_FILE_PATH: str = os.environ.get(
     "DICOM_FILE_PATH",
-    str(_REPO_ROOT / "appium" / "test_data" / "sample.dcm"),
+    str(_REPO_ROOT / "appium_tests" / "test_data" / "sample.dcm"),
 )
 
 # ── Backend API ────────────────────────────────────────────────────────────────

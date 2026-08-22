@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Registration Tests
 =====================================
 TC-APP-002  User Registration (New Account)
@@ -7,9 +7,9 @@ TC-APP-002  User Registration (New Account)
 import time
 import pytest
 
-from appium.pages.login_page import LoginPage
-from appium.pages.signup_page import SignupPage
-from appium.utils.test_data import (
+from appium_tests.pages.login_page import LoginPage
+from appium_tests.pages.signup_page import SignupPage
+from appium_tests.utils.test_data import (
     UIText,
     REG_EMAIL, REG_PASSWORD, REG_NAME, REG_LICENSE,
 )

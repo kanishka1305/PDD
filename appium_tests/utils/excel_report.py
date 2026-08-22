@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Excel & HTML Report Generator
 ===============================================
 Reads test results collected by conftest.py and generates:
@@ -6,7 +6,7 @@ Reads test results collected by conftest.py and generates:
   - appium/reports/html/Appium_E2E_Test_Report.html
 
 Usage (called automatically at end of pytest session via conftest.py):
-    from appium.utils.excel_report import generate_reports
+    from appium_tests.utils.excel_report import generate_reports
     generate_reports(results_list)
 """
 
@@ -25,8 +25,8 @@ try:
 except ImportError:
     raise ImportError("openpyxl not installed. Run: pip install openpyxl==3.1.5")
 
-from appium.config.config import EXCEL_DIR, HTML_DIR, SCREENSHOTS_DIR
-from appium.utils.test_data import (
+from appium_tests.config.config import EXCEL_DIR, HTML_DIR, SCREENSHOTS_DIR
+from appium_tests.utils.test_data import (
     DEVICE_NAME, PLATFORM_VERSION, APP_VERSION, APP_PACKAGE
 )
 
@@ -131,7 +131,7 @@ def _generate_excel(results: list[dict], now_str: str, out: Path):
     _sheet5_device_info(wb, now_str)
 
     wb.save(str(out))
-    print(f"✓ Excel report → {out}  ({out.stat().st_size:,} bytes)")
+    print(f"SUCCESS Excel report -> {out}  ({out.stat().st_size:,} bytes)")
 
 
 def _sheet1_test_summary(wb, results, now_str):
@@ -248,7 +248,7 @@ def _sheet2_execution_summary(wb, results, now_str):
     # Overall verdict
     vri = len(rows) + 4
     ws.merge_cells(f"A{vri}:B{vri}")
-    verdict = "✓  OVERALL: PASS" if failed == 0 else f"✗  OVERALL: FAIL — {failed} test(s) failed"
+    verdict = "SUCCESS  OVERALL: PASS" if failed == 0 else f"FAILED  OVERALL: FAIL — {failed} test(s) failed"
     bg = C["pass_bg"] if failed == 0 else C["fail_bg"]
     fg = C["pass_fg"] if failed == 0 else C["fail_fg"]
     vc = ws.cell(vri, 1, verdict)
@@ -503,7 +503,7 @@ def _generate_html(results: list[dict], now_str: str, out: Path):
 </div>
 
 <div class="container">
-  <div class="result-badge">{'✓' if failed==0 else '✗'} OVERALL RESULT: {result_label}</div>
+  <div class="result-badge">{'SUCCESS' if failed==0 else 'FAILED'} OVERALL RESULT: {result_label}</div>
 
   <div class="cards">
     <div class="card blue"><div class="val">{total}</div><div class="lbl">Total Tests</div></div>
@@ -550,4 +550,4 @@ def _generate_html(results: list[dict], now_str: str, out: Path):
 </html>"""
 
     out.write_text(html, encoding="utf-8")
-    print(f"✓ HTML report  → {out}  ({out.stat().st_size:,} bytes)")
+    print(f"SUCCESS HTML report  -> {out}  ({out.stat().st_size:,} bytes)")

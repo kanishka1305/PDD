@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Mobile — Navigation Tests
 ===================================
 TC-APP-006  Navigation (bottom tabs + quick actions)
@@ -6,11 +6,11 @@ TC-APP-006  Navigation (bottom tabs + quick actions)
 
 import pytest
 
-from appium.pages.home_page import HomePage
-from appium.pages.upload_page import UploadPage
-from appium.pages.results_page import ResultsPage
-from appium.pages.profile_page import ProfilePage
-from appium.utils.test_data import UIText
+from appium_tests.pages.home_page import HomePage
+from appium_tests.pages.upload_page import UploadPage
+from appium_tests.pages.results_page import ResultsPage
+from appium_tests.pages.profile_page import ProfilePage
+from appium_tests.utils.test_data import UIText
 
 
 class TestNavigation:

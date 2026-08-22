@@ -1,4 +1,4 @@
-"""
+﻿"""
 DentAI Appium — Signup Page Object
 =====================================
 Locators verified against:  DentAI-Mobile/src/screens/SignupScreen.tsx
@@ -19,12 +19,12 @@ UI elements:
 """
 
 import logging
-from appium.webdriver.common.appiumby import AppiumBy
+from appium_tests.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support import expected_conditions as EC
 
-from appium.pages.base_page import BasePage
-from appium.utils.test_data import UIText
-from appium.config.config import EXPLICIT_WAIT
+from appium_tests.pages.base_page import BasePage
+from appium_tests.utils.test_data import UIText
+from appium_tests.config.config import EXPLICIT_WAIT
 
 logger = logging.getLogger(__name__)
 
