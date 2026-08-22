@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:orientation="vertical">
+
+    <!-- TOP TOOLBAR -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/back__1_"
+            app:tint="#8E8E93"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Refinement Tools"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Crop &amp; adjust segmentation"
+                android:textColor="#8E8E93"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
+
+        <!-- Settings icon as confirm placeholder -->
+        <ImageView
+            android:id="@+id/btnActionConfirm"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/settings"
+            app:tint="#0A84FF"/>
+    </RelativeLayout>
+
+    <!-- CORE REFINEMENT VIEWER -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="20dp">
+
+        <!-- Image viewport with crop frame -->
+        <FrameLayout
+            android:id="@+id/cropViewport"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/card_dark_bg"
+            android:padding="10dp">
+
+            <!-- Dotted blue crop rectangle simulation -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="20dp"
+                android:background="@drawable/upload_bg"
+                android:backgroundTint="#000A84FF">
+
+                <!-- Graphic representation of jaw structure inside crop area -->
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true">
+
+                    <View
+                        android:layout_width="160dp"
+                        android:layout_height="90dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#0C1B2B"/>
+                </RelativeLayout>
+            </RelativeLayout>
+        </FrameLayout>
+
+        <!-- Vertical toolbar floating on left (pencil, brush, eraser tools) -->
+        <LinearLayout
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/icon_dark_bg"
+            android:padding="6dp"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="14dp"
+            android:elevation="4dp">
+
+            <!-- Settings icon as brush -->
+            <ImageView
+                android:id="@+id/btnToolBrush"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/settings"
+                app:tint="#0A84FF"
+                android:layout_gravity="center"
+                android:layout_marginVertical="8dp"/>
+
+            <!-- Close icon as eraser -->
+            <ImageView
+                android:id="@+id/btnToolEraser"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/close"
+                app:tint="#8E8E93"
+                android:layout_gravity="center"
+                android:layout_marginVertical="8dp"/>
+
+            <!-- Upload icon as crop -->
+            <ImageView
+                android:id="@+id/btnToolCrop"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/upload"
+                app:tint="#8E8E93"
+                android:layout_gravity="center"
+                android:layout_marginVertical="8dp"/>
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- SLIDERS & CONTROLS -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Brush Size Slider -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Brush size"
+                android:textColor="#8E8E93"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/txtBrushSizeVal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="24 px"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+        </RelativeLayout>
+
+        <SeekBar
+            android:id="@+id/sliderBrushSize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:max="100"
+            android:progress="24"
+            android:thumbTint="#0A84FF"
+            android:progressTint="#0A84FF"
+            android:progressBackgroundTint="#2C2C2E"/>
+
+        <!-- Confidence Threshold Slider -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Confidence threshold"
+                android:textColor="#8E8E93"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/txtConfidenceVal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="82%"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+        </RelativeLayout>
+
+        <SeekBar
+            android:id="@+id/sliderConfidence"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:max="100"
+            android:progress="82"
+            android:thumbTint="#FFD60A"
+            android:progressTint="#FFD60A"
+            android:progressBackgroundTint="#2C2C2E"/>
+
+        <!-- Color Gradient Track Bar underneath confidence -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp"
+            android:layout_marginHorizontal="16dp">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#FF453A"/>
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.5"
+                android:background="#FFD60A"/>
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:background="#30D158"/>
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginHorizontal="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Low"
+                android:textColor="#555555"
+                android:textSize="11sp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="High"
+                android:textColor="#555555"
+                android:textSize="11sp"/>
+        </RelativeLayout>
+
+        <!-- Save Button CTA -->
+        <Button
+            android:id="@+id/btnSaveChanges"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/button_blue_bg"
+            android:text="Save changes"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="10dp"/>
+
+    </LinearLayout>
+
+</LinearLayout>

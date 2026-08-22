@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/back__1_"
+                app:tint="#0A84FF"
+                android:layout_marginTop="4dp"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Privacy Policy"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="26sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last updated: January 20, 2024"
+                    android:textColor="#8A8A8A"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/security"
+                app:tint="#0A84FF"/>
+        </LinearLayout>
+
+        <!-- Intro Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/edit_bg"
+            android:padding="18dp"
+            android:layout_marginTop="30dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="At DentAI Segment, we take your privacy seriously. This policy describes how we collect, use, and protect your personal and medical information in compliance with HIPAA and other applicable regulations."
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp"/>
+        </LinearLayout>
+
+        <!-- Section 1 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Information We Collect"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="24sp"
+            android:layout_marginTop="35dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="We collect information you provide directly to us, including your name, email address, medical license information, and dental imaging data. We also collect information about your usage of the DentAI Segment platform, including analysis history and preferences."
+            android:textColor="#B0B0B0"
+            android:textSize="15sp"
+            android:lineSpacingExtra="8dp"
+            android:layout_marginTop="14dp"/>
+
+        <!-- Section 2 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="How We Use Your Information"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="24sp"
+            android:layout_marginTop="35dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Your information is used to provide and improve our AI-powered dental imaging analysis services. We use your data to train and refine our machine learning models, generate diagnostic reports, and provide personalized recommendations. All patient data is anonymized before being used for model training."
+            android:textColor="#B0B0B0"
+            android:textSize="15sp"
+            android:lineSpacingExtra="8dp"
+            android:layout_marginTop="14dp"/>
+
+        <!-- Section 3 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Data Security"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="24sp"
+            android:layout_marginTop="35dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="We implement industry-standard encryption, secure cloud storage, and strict access controls to protect your data. Your information is securely stored and only accessible by authorized personnel."
+            android:textColor="#B0B0B0"
+            android:textSize="15sp"
+            android:lineSpacingExtra="8dp"
+            android:layout_marginTop="14dp"/>
+
+        <!-- Section 4 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your Rights"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="24sp"
+            android:layout_marginTop="35dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="You have the right to access, update, or delete your personal information at any time. You may also request a copy of your stored data or withdraw consent for data processing."
+            android:textColor="#B0B0B0"
+            android:textSize="15sp"
+            android:lineSpacingExtra="8dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="40dp"/>
+
+    </LinearLayout>
+
+</ScrollView>

@@ -1,0 +1,18 @@
+{
+  "name": "dentai-selenium-e2e",
+  "version": "1.0.0",
+  "description": "End-to-End Selenium tests for DentAI CBCT AI Segmentation Platform",
+  "main": "index.js",
+  "scripts": {
+    "test":   "mocha tests/**/*.test.js --timeout 60000 --reporter spec --exit",
+    "report": "node generate_report.js",
+    "run-all": "npm test; npm run report"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.21.0",
+    "chromedriver":       "^126.0.0",
+    "exceljs":            "^4.4.0",
+    "mocha":              "^10.4.0",
+    "chai":               "^4.4.1"
+  }
+}

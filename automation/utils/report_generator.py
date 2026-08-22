@@ -17,6 +17,7 @@ def generate_html_report(results: list, summary: dict, output_path: Path = None)
     skipped  = summary.get("skipped", 0)
     rate     = f"{passed/total*100:.1f}%" if total else "0%"
     duration = sum(r.get("duration", 0) for r in results)
+    rate_color = "#28a745" if failed == 0 else "#dc3545"
 
     # Category breakdown
     cats = {}
@@ -82,7 +83,7 @@ def generate_html_report(results: list, summary: dict, output_path: Path = None)
     <div class="card"><div class="num" style="color:#28a745">{passed}</div><div class="lbl">Passed</div></div>
     <div class="card"><div class="num" style="color:#dc3545">{failed}</div><div class="lbl">Failed</div></div>
     <div class="card"><div class="num" style="color:#ffc107">{skipped}</div><div class="lbl">Skipped</div></div>
-    <div class="card"><div class="num" style="color:{"#28a745" if failed==0 else "#dc3545"}">{rate}</div><div class="lbl">Pass Rate</div></div>
+    <div class="card"><div class="num" style="color:{rate_color}">{rate}</div><div class="lbl">Pass Rate</div></div>
   </div>
   <div class="section">
     <h2>📊 Results by Module</h2>

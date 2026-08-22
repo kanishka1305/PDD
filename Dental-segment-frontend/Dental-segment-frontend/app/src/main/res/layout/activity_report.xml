@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:orientation="vertical">
+
+    <!-- TOP TOOLBAR -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/back__1_"
+            app:tint="#8E8E93"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Diagnostic Report"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/txtReportSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PT-2024-001 • Jan 20, 2024"
+                android:textColor="#8E8E93"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- CORE REPORT CONTENTS -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="20dp">
+
+            <!-- 3D Reconstruction Model View Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:background="@drawable/card_dark_bg"
+                android:backgroundTint="#0E1724"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp">
+
+                <!-- 3D Render Preview Graphics -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <View
+                        android:layout_width="160dp"
+                        android:layout_height="90dp"
+                        android:background="@drawable/upload_bg"
+                        android:backgroundTint="#15365E" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="[ 3D Render Mesh ]"
+                        android:textColor="#0A84FF"
+                        android:textStyle="bold"/>
+                </RelativeLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3D Reconstruction • Segmented Model"
+                    android:textColor="#8E8E93"
+                    android:textSize="12sp"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+
+            <!-- Volumetric Data Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_dark_bg"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginTop="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#FFFFFF"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Volumetric Data"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:layout_marginStart="10dp"/>
+                </LinearLayout>
+
+                <!-- Total Bone Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total Bone Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtTotalBoneVol"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="42.8 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Cortical Bone Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Cortical Bone"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtCorticalBone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="28.3 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Trabecular Bone Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Trabecular Bone"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtTrabecularBone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="14.5 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Nerve Canal Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nerve Canal Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtNerveCanalVol"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="0.42 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- Mandible Anatomical Subregions Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_dark_bg"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginTop="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#0A84FF"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mandible Subregions"
+                        android:textColor="#0A84FF"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:layout_marginStart="10dp"/>
+                </LinearLayout>
+
+                <!-- Condyles Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Condyles Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtCondylesVolume"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="4.2 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Ramus Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ramus Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtRamusVolume"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="12.5 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Parasymphysis Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Parasymphysis Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtParasymphysisVolume"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="16.1 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+                <!-- Symphysis Volume Row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Symphysis Volume"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/txtSymphysisVolume"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="10.0 cm3"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- Nerve-to-Root Distance Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_dark_bg"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginTop="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#FF9F0A"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nerve-to-Root Distance"
+                        android:textColor="#FF9F0A"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:layout_marginStart="10dp"/>
+                </LinearLayout>
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tooth #17 Root Apex"
+                        android:textColor="#8E8E93"
+                        android:textSize="14sp"
+                        android:layout_centerVertical="true"/>
+
+                    <!-- HIGH Tag -->
+                    <TextView
+                        android:id="@+id/txtNerveDistanceTag"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="HIGH"
+                        android:textColor="#FF453A"
+                        android:textStyle="bold"
+                        android:textSize="13sp"
+                        android:background="@drawable/icon_dark_bg"
+                        android:backgroundTint="#40100D"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="4dp"/>
+                </RelativeLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:orientation="vertical">
+
+    <!-- TOP TOOLBAR -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/btnMenu"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/menu"
+            app:tint="#CFCFCF"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI Segmentation"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lower jaw analysis"
+                android:textColor="#8E8E93"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Stop Icon using close -->
+            <ImageView
+                android:id="@+id/btnStop"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/close"
+                app:tint="#8E8E93"
+                android:layout_marginEnd="16dp"/>
+
+            <!-- Download Icon using upload -->
+            <ImageView
+                android:id="@+id/btnDownload"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/upload"
+                android:rotation="180"
+                app:tint="#0A84FF"/>
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- SCROLLABLE CORE VIEW -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="20dp">
+
+            <!-- 3D/2D Visual Arch Preview Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="@drawable/card_dark_bg"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center">
+
+                    <View
+                        android:layout_width="180dp"
+                        android:layout_height="100dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#0C1B2B"
+                        android:layout_centerInParent="true"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="[ U-Arch Segments ]"
+                        android:textColor="#3D80E5"
+                        android:textStyle="bold"
+                        android:layout_centerInParent="true"/>
+                </RelativeLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lower Jaw - AI Segmented"
+                    android:textColor="#8E8E93"
+                    android:textSize="12sp"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+
+            <!-- Selection Indicators / Dots -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/circle_bg"
+                    android:backgroundTint="#0A84FF"/>
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/circle_bg"
+                    android:backgroundTint="#2C2C2E"
+                    android:layout_marginStart="8dp"/>
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/circle_bg"
+                    android:backgroundTint="#2C2C2E"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LOWER JAW PARTS"
+                android:textColor="#8E8E93"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Grid Layout of status cards -->
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2"
+                android:rowCount="3"
+                android:alignmentMode="alignMargins"
+                android:columnOrderPreserved="false">
+
+                <!-- Incisors -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#0A84FF"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Incisors"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="OK"
+                        android:textColor="#30D158"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/icon_dark_bg"
+                        android:backgroundTint="#193024"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"/>
+                </LinearLayout>
+
+                <!-- Canines -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#30D158"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Canines"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="OK"
+                        android:textColor="#30D158"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/icon_dark_bg"
+                        android:backgroundTint="#193024"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"/>
+                </LinearLayout>
+
+                <!-- Premolars -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#FFD60A"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Premolars"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Notch"
+                        android:textColor="#FFD60A"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/icon_dark_bg"
+                        android:backgroundTint="#332B03"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"/>
+                </LinearLayout>
+
+                <!-- Molars -->
+                <LinearLayout
+                    android:id="@+id/cardMolars"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:backgroundTint="#2C2C2E"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#FF453A"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Molars"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textStyle="bold"
+                        android:textSize="13sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Risk"
+                        android:textColor="#FF453A"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/icon_dark_bg"
+                        android:backgroundTint="#330E0B"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"/>
+                </LinearLayout>
+
+                <!-- Mandibular Nerve -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#BF5AF2"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Mandib. Nerve"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textSize="12sp"/>
+
+                    <TextView
+                        android:id="@+id/txtNerveScore"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="94.2%"
+                        android:textColor="#FF9F0A"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:paddingHorizontal="4dp"/>
+                </LinearLayout>
+
+                <!-- Jawbone -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/card_dark_bg"
+                    android:orientation="horizontal"
+                    android:padding="14dp"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/circle_bg"
+                        android:backgroundTint="#32D74B"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Jawbone"
+                        android:textColor="#FFFFFF"
+                        android:layout_marginStart="10dp"
+                        android:textSize="12sp"/>
+
+                    <TextView
+                        android:id="@+id/txtJawboneScore"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="88.1%"
+                        android:textColor="#32D74B"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:paddingHorizontal="4dp"/>
+                </LinearLayout>
+            </GridLayout>
+
+            <!-- Detailed Selected Segment Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_dark_bg"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Molars  (selected)"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Teeth #36, #37, #38, #47"
+                    android:textColor="#8E8E93"
+                    android:textSize="13sp"
+                    android:layout_marginTop="2dp"/>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#2C2C2E"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Stats Layout -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Confidence Row -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Confidence"
+                            android:textColor="#8E8E93"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:id="@+id/txtDetailConfidence"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:text="88.6%"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="14sp"/>
+                    </RelativeLayout>
+
+                    <!-- Nerve Distance Row -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Nerve distance"
+                            android:textColor="#8E8E93"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:id="@+id/txtDetailNerveDistance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:text="1.2 mm"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="14sp"/>
+                    </RelativeLayout>
+
+                    <!-- Bone Loss Row -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Bone loss"
+                            android:textColor="#8E8E93"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:id="@+id/txtDetailBoneLoss"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:text="23%"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:textSize="14sp"/>
+                    </RelativeLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- BOTTOM ACTION NAVIGATION -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#121212"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Tab 1: Refinement tools -->
+        <LinearLayout
+            android:id="@+id/tabRefine"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+
+            <!-- Settings icon for refine -->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/settings"
+                app:tint="#0A84FF"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Refine"
+                android:textColor="#0A84FF"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Tab 2: Diagnostic report view -->
+        <LinearLayout
+            android:id="@+id/tabReport"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+
+            <!-- Home icon for report -->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/home__1_"
+                app:tint="#8E8E93"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Report"
+                android:textColor="#8E8E93"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

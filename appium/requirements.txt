@@ -1,0 +1,18 @@
+# ── DentAI Mobile — Appium E2E Test Dependencies ─────────────────────────────
+# Install with: pip install -r appium/requirements.txt
+
+# ── Appium ────────────────────────────────────────────────────────────────────
+Appium-Python-Client==4.3.1     # Appium Python client (Appium 2.x compatible)
+selenium==4.25.0                # WebDriver base (required by Appium client)
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest==8.3.3                   # Test runner
+pytest-html==4.1.1              # HTML test report plugin
+pytest-metadata==3.1.1          # Metadata for pytest-html
+
+# ── Reporting ────────────────────────────────────────────────────────────────
+openpyxl==3.1.5                 # Excel report generation
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+requests==2.32.3                # HTTP requests (API health check)
+python-dotenv==1.1.1            # Load .env files for local development
