@@ -6,6 +6,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography, shadows, gradients } from '../utils/theme';
 import { Card, CardHeader, Badge, StatusPill, EmptyState, Skeleton } from '../components/UI';
 import { api } from '../api/client';
@@ -19,6 +20,7 @@ const { width } = Dimensions.get('window');
 
 export default function DashboardScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const rootNav  = useNavigation<any>();
   const [scans, setScans]         = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,6 +114,14 @@ export default function DashboardScreen({ navigation }: Props) {
               bg="rgba(34,197,94,.1)"
               icon="📊"
               onPress={() => navigation.navigate('Results', {})}
+            />
+            <QuickAction
+              label="Workflow"
+              sub="How it works"
+              color={colors.purple}
+              bg="rgba(139,92,246,.1)"
+              icon="⬡"
+              onPress={() => rootNav.navigate('Workflow')}
             />
           </View>
         </Card>
