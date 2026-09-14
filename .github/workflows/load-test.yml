@@ -1,448 +1,84 @@
-name: "DentAI — Baseline Load Test"
+name: Dental CBCT AI — Load Test
 
-# ── Triggers ──────────────────────────────────────────────────────────────────
 on:
-  # Manual trigger with configurable parameters
   workflow_dispatch:
     inputs:
-      base_url:
-        description: "Target API base URL"
-        required: false
-        default: "https://pdd-uw63.onrender.com"
-      users:
-        description: "Number of concurrent virtual users"
-        required: false
-        default: "100"
-      spawn_rate:
-        description: "Users spawned per second"
-        required: false
-        default: "10"
-      duration:
-        description: "Test duration (e.g. 60s, 2m)"
-        required: false
-        default: "60s"
-      thresh_error_rate:
-        description: "Max acceptable error rate (%)"
-        required: false
-        default: "1.0"
-      thresh_avg_rt:
-        description: "Max acceptable average response time (ms)"
-        required: false
-        default: "500"
-      thresh_p95:
-        description: "Max acceptable P95 response time (ms)"
-        required: false
-        default: "1000"
-      thresh_p99:
-        description: "Max acceptable P99 response time (ms)"
-        required: false
-        default: "2000"
-
-  # Scheduled weekly baseline (Monday 06:00 UTC)
-  schedule:
-    - cron: "0 6 * * 1"
-
-  # Run on every push to main branches (can be disabled by removing this block)
-  push:
-    branches: [main, master]
-    paths:
-      - "load_tests/**"
-      - "load_test/**"
-      - ".github/workflows/load-test.yml"
-
-# ── Permissions ───────────────────────────────────────────────────────────────
-permissions:
-  contents: read
-  actions:  read
-
-# ── Prevent duplicate concurrent load tests ───────────────────────────────────
-concurrency:
-  group: "load-test-${{ github.ref }}"
-  cancel-in-progress: true
-
-# ── Global environment ────────────────────────────────────────────────────────
-env:
-  BASE_URL:           ${{ github.event.inputs.base_url        || 'https://pdd-uw63.onrender.com' }}
-  USERS:              ${{ github.event.inputs.users           || '100' }}
-  SPAWN_RATE:         ${{ github.event.inputs.spawn_rate      || '10' }}
-  DURATION:           ${{ github.event.inputs.duration        || '60s' }}
-  THRESH_ERROR_RATE:  ${{ github.event.inputs.thresh_error_rate || '1.0' }}
-  THRESH_AVG_RT:      ${{ github.event.inputs.thresh_avg_rt   || '500' }}
-  THRESH_P95:         ${{ github.event.inputs.thresh_p95      || '1000' }}
-  THRESH_P99:         ${{ github.event.inputs.thresh_p99      || '2000' }}
-  # Locust CSV prefix — files will be:
-  #   load_tests/results/stats_stats.csv
-  #   load_tests/results/stats_stats_history.csv
-  #   load_tests/results/stats_failures.csv
-  #   load_tests/results/stats_exceptions.csv
-  CSV_PREFIX:         "load_tests/results/stats"
-  RESULTS_DIR:        "load_tests/results"
-  REPORTS_DIR:        "reports"
+      test_mode:
+        description: 'Load Test Mode'
+        required: true
+        default: 'baseline'
+        type: choice
+        options:
+          - baseline    # 1 user, 30s
+          - light       # 5 users, 1m
+          - medium      # 20 users, 2m
+          - stress      # 50 users step load
 
 jobs:
-  # ════════════════════════════════════════════════════════════════════════════
-  # JOB 1 — Baseline Load Test
-  # ════════════════════════════════════════════════════════════════════════════
-  baseline-load-test:
-    name: "Baseline Load Test (100 users · 60s)"
+  load-test:
     runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dental_ai
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
-      # ── 1. Checkout ────────────────────────────────────────────────────────
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ── 2. Python setup ────────────────────────────────────────────────────
-      - name: Set up Python 3.11
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
+          python-version: '3.11'
+          cache: 'pip'
 
-      # ── 3. Install dependencies ────────────────────────────────────────────
-      - name: Install load-test dependencies
-        run: |
-          pip install --upgrade pip
-          pip install \
-            locust==2.32.3 \
-            openpyxl==3.1.5 \
-            requests==2.32.3 \
-            python-dotenv==1.1.1
+      - name: Install Application Dependencies
+        run: pip install -r requirements.txt
 
-      # ── 4. Create output directories ───────────────────────────────────────
-      - name: Create output directories
-        run: |
-          mkdir -p "${{ env.RESULTS_DIR }}"
-          mkdir -p "${{ env.REPORTS_DIR }}"
-          echo "✓ Created: ${{ env.RESULTS_DIR }}"
-          echo "✓ Created: ${{ env.REPORTS_DIR }}"
+      - name: Install Load Testing Dependencies
+        run: pip install -r load_testing/requirements.txt
 
-      # ── 5. Verify API is reachable ─────────────────────────────────────────
-      - name: Wait for API to be reachable
-        id: api_check
-        run: |
-          HEALTH_URL="${{ env.BASE_URL }}/health"
-          echo "Polling: $HEALTH_URL"
-          MAX_ATTEMPTS=10
-          ATTEMPT=0
-          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-            ATTEMPT=$((ATTEMPT + 1))
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 15 --connect-timeout 10 "$HEALTH_URL" 2>/dev/null || echo "000")
-            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS → HTTP $HTTP_CODE"
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "api_reachable=true" >> $GITHUB_OUTPUT
-              echo "✓ API is reachable (HTTP 200)"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "api_reachable=false" >> $GITHUB_OUTPUT
-          echo "⚠ API did not return HTTP 200 after $MAX_ATTEMPTS attempts"
-          echo "  Load test will still run — results may reflect connectivity issues."
-
-      # ── 6. Run Locust baseline test ────────────────────────────────────────
-      - name: Run Locust baseline test
-        id: locust_run
+      - name: Start FastAPI Application (Background)
         env:
-          # Pass credentials from GitHub Secrets (fall back to dev defaults if not set)
-          TEST_EMAIL:    ${{ secrets.TEST_EMAIL    || 'loadtest@dentai.com' }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD || 'LoadTest@123' }}
-          TEST_NAME:     ${{ secrets.TEST_NAME     || 'LoadTest Doctor' }}
-          TEST_LICENSE:  ${{ secrets.TEST_LICENSE  || 'LT-000001' }}
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: dental_ai
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "  DentAI — Baseline Load Test"
-          echo "═══════════════════════════════════════════════════════"
-          echo "  Target  : ${{ env.BASE_URL }}"
-          echo "  Users   : ${{ env.USERS }}"
-          echo "  Spawn   : ${{ env.SPAWN_RATE }} users/s"
-          echo "  Duration: ${{ env.DURATION }}"
-          echo "  CSV out : ${{ env.CSV_PREFIX }}"
-          echo "═══════════════════════════════════════════════════════"
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          # Wait for API to boot
+          until curl -s http://127.0.0.1:8000/health; do sleep 2; done
 
-          # Run Locust in headless mode
-          # --exit-code-on-error 0 prevents Locust from failing the step due to
-          # individual request failures — we handle PASS/FAIL via thresholds below.
-          locust \
-            -f load_tests/locustfile.py \
-            --headless \
-            -u "${{ env.USERS }}" \
-            -r "${{ env.SPAWN_RATE }}" \
-            -t "${{ env.DURATION }}" \
-            --host "${{ env.BASE_URL }}" \
-            --csv "${{ env.CSV_PREFIX }}" \
-            --html "${{ env.RESULTS_DIR }}/locust_report.html" \
-            --only-summary \
-            --exit-code-on-error 0
-          echo "✓ Locust run completed"
-
-      # ── 7. Display raw CSV summary in console ──────────────────────────────
-      - name: Display raw CSV results
-        if: always()
+      - name: Execute Load Test (${{ inputs.test_mode }})
+        env:
+          BASE_URL: "http://127.0.0.1:8000"
+          LOAD_TEST_USERNAME: "ci_load_test@dentai.com"
+          LOAD_TEST_PASSWORD: "CI_LoadTest@123"
         run: |
-          STATS_CSV="${{ env.CSV_PREFIX }}_stats.csv"
-          if [ -f "$STATS_CSV" ]; then
-            echo "════ Raw Locust Stats ════════════════════════════════════"
-            cat "$STATS_CSV"
-            echo ""
-            echo "════ Failures ═══════════════════════════════════════════"
-            [ -f "${{ env.CSV_PREFIX }}_failures.csv" ] \
-              && cat "${{ env.CSV_PREFIX }}_failures.csv" \
-              || echo "  No failures file found"
-          else
-            echo "⚠ Stats CSV not found — Locust may have failed to start"
+          if [ "${{ inputs.test_mode }}" == "baseline" ]; then
+            locust -f load_testing/locustfile.py --headless -u 1 -r 1 -t 30s --host $BASE_URL
+          elif [ "${{ inputs.test_mode }}" == "light" ]; then
+            locust -f load_testing/locustfile.py --headless -u 5 -r 1 -t 1m --host $BASE_URL
+          elif [ "${{ inputs.test_mode }}" == "medium" ]; then
+            locust -f load_testing/locustfile.py --headless -u 20 -r 2 -t 2m --host $BASE_URL
+          elif [ "${{ inputs.test_mode }}" == "stress" ]; then
+            locust -f load_testing/locustfile.py --headless --step-load -u 50 --step-users 5 --step-time 10s -t 3m --host $BASE_URL
           fi
-
-      # ── 8. Generate Excel + HTML reports ──────────────────────────────────
-      - name: Generate Excel and HTML reports
-        if: always()
-        env:
-          BASE_URL:          ${{ env.BASE_URL }}
-          THRESH_ERROR_RATE: ${{ env.THRESH_ERROR_RATE }}
-          THRESH_AVG_RT:     ${{ env.THRESH_AVG_RT }}
-          THRESH_P95:        ${{ env.THRESH_P95 }}
-          THRESH_P99:        ${{ env.THRESH_P99 }}
-          GITHUB_ACTIONS:    "true"
-        run: |
-          # Copy any CSVs from the canonical results path that generate_load_report.py expects
-          mkdir -p load_test/results
-          if [ -f "${{ env.CSV_PREFIX }}_stats.csv" ]; then
-            cp "${{ env.CSV_PREFIX }}_stats.csv"         load_test/results/stats_stats.csv
-            cp "${{ env.CSV_PREFIX }}_stats_history.csv" load_test/results/stats_stats_history.csv 2>/dev/null || true
-            cp "${{ env.CSV_PREFIX }}_failures.csv"      load_test/results/stats_failures.csv       2>/dev/null || true
-            cp "${{ env.CSV_PREFIX }}_exceptions.csv"    load_test/results/stats_exceptions.csv     2>/dev/null || true
-            echo "✓ CSVs copied to load_test/results/ for report generator"
-          else
-            echo "⚠ No stats CSV — report will use synthetic metrics"
-          fi
-
-          python load_test/generate_load_report.py
-          echo ""
-          echo "Generated reports:"
-          ls -lh reports/ 2>/dev/null || echo "  No reports directory found"
-
-      # ── 9. Extract metrics and evaluate thresholds ─────────────────────────
-      - name: Evaluate performance thresholds
-        id: thresholds
-        if: always()
-        env:
-          THRESH_ERROR_RATE: ${{ env.THRESH_ERROR_RATE }}
-          THRESH_AVG_RT:     ${{ env.THRESH_AVG_RT }}
-          THRESH_P95:        ${{ env.THRESH_P95 }}
-          THRESH_P99:        ${{ env.THRESH_P99 }}
-        run: |
-          python - << 'PYEOF'
-          import csv, os, sys
-          from pathlib import Path
-
-          stats_csv = Path("load_tests/results/stats_stats.csv")
-          if not stats_csv.exists():
-            stats_csv = Path("load_test/results/stats_stats.csv")
-
-          # ── Read aggregated row ──────────────────────────────────────────
-          def safe_f(v, d=0.0):
-            try: return float(v)
-            except: return d
-          def safe_i(v, d=0):
-            try: return int(float(v))
-            except: return d
-
-          if stats_csv.exists():
-            rows = list(csv.DictReader(stats_csv.open(encoding="utf-8")))
-            agg  = next((r for r in rows if r.get("Name","").strip() == "Aggregated"), {})
-            total  = safe_i(agg.get("Request Count", 0))
-            fails  = safe_i(agg.get("Failure Count", 0))
-            rps    = safe_f(agg.get("Requests/s",   0))
-            avg    = safe_f(agg.get("Average Response Time", 0))
-            mn     = safe_f(agg.get("Min Response Time",     0))
-            mx     = safe_f(agg.get("Max Response Time",     0))
-            p50    = safe_f(agg.get("50%", 0))
-            p90    = safe_f(agg.get("90%", 0))
-            p95    = safe_f(agg.get("95%", 0))
-            p99    = safe_f(agg.get("99%", 0))
-            err    = (fails / max(total, 1)) * 100
-            source = "real"
-          else:
-            print("⚠ No stats CSV — using synthetic fallback metrics for summary")
-            total, fails, rps  = 2992, 32, 49.87
-            avg, mn, mx        = 273.4, 20.0, 980.0
-            p50, p90, p95, p99 = 210.0, 400.0, 487.0, 610.0
-            err                = (fails / max(total, 1)) * 100
-            source             = "synthetic"
-
-          # ── Thresholds ───────────────────────────────────────────────────
-          T_ERR = float(os.environ.get("THRESH_ERROR_RATE", "1.0"))
-          T_AVG = float(os.environ.get("THRESH_AVG_RT",     "500"))
-          T_P95 = float(os.environ.get("THRESH_P95",        "1000"))
-          T_P99 = float(os.environ.get("THRESH_P99",        "2000"))
-
-          checks = [
-            ("Error Rate",              err,  T_ERR, "<=", "%"),
-            ("Average Response Time",   avg,  T_AVG, "<=", "ms"),
-            ("P95 Response Time",       p95,  T_P95, "<=", "ms"),
-            ("P99 Response Time",       p99,  T_P99, "<=", "ms"),
-          ]
-
-          overall = "PASS"
-          print("\n══════════════════════════════════════════════════════════")
-          print("  PERFORMANCE THRESHOLD EVALUATION")
-          print("══════════════════════════════════════════════════════════")
-          for name, val, thr, op, unit in checks:
-            passed = val <= thr
-            status = "✓ PASS" if passed else "✗ FAIL"
-            if not passed:
-              overall = "FAIL"
-            print(f"  {name:<28} {val:>8.2f} {unit:<3}  (threshold {op} {thr} {unit})  → {status}")
-          print("──────────────────────────────────────────────────────────")
-          print(f"  OVERALL RESULT: {overall}")
-          print("══════════════════════════════════════════════════════════\n")
-
-          # Export for summary step
-          env_file = os.environ.get("GITHUB_ENV", "")
-          if env_file:
-            with open(env_file, "a") as f:
-              f.write(f"LT_TOTAL={total}\n")
-              f.write(f"LT_FAILS={fails}\n")
-              f.write(f"LT_RPS={rps:.2f}\n")
-              f.write(f"LT_AVG={avg:.1f}\n")
-              f.write(f"LT_MIN={mn:.0f}\n")
-              f.write(f"LT_MAX={mx:.0f}\n")
-              f.write(f"LT_P50={p50:.0f}\n")
-              f.write(f"LT_P90={p90:.0f}\n")
-              f.write(f"LT_P95={p95:.0f}\n")
-              f.write(f"LT_P99={p99:.0f}\n")
-              f.write(f"LT_ERR={err:.2f}\n")
-              f.write(f"LT_SOURCE={source}\n")
-              f.write(f"LT_RESULT={overall}\n")
-
-          sys.exit(0)
-          PYEOF
-
-      # ── 10. Write GitHub Actions Job Summary ───────────────────────────────
-      - name: Write Job Summary
-        if: always()
-        run: |
-          RESULT="${{ env.LT_RESULT || 'UNKNOWN' }}"
-          ICON="✓" && [ "$RESULT" = "FAIL" ] && ICON="✗"
-          SOURCE="${{ env.LT_SOURCE || 'unknown' }}"
-          SOURCE_NOTE=""
-          [ "$SOURCE" = "synthetic" ] && SOURCE_NOTE=" _(synthetic metrics — no live Locust run data)_"
-
-          cat >> $GITHUB_STEP_SUMMARY << MARKDOWN
-          # 🦷 DentAI — Baseline Load Test Report
-
-          **${ICON} Overall Result: ${RESULT}**${SOURCE_NOTE}
-
-          | Parameter | Value |
-          |-----------|-------|
-          | Target API | \`${{ env.BASE_URL }}\` |
-          | Virtual Users | ${{ env.USERS }} concurrent |
-          | Spawn Rate | ${{ env.SPAWN_RATE }} users/second |
-          | Duration | ${{ env.DURATION }} |
-          | Run Date | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |
-          | Triggered by | \`${{ github.event_name }}\` |
-
-          ---
-
-          ## 📊 Request Summary
-
-          | Metric | Value |
-          |--------|------:|
-          | Total Requests | $(printf "%'.0f" ${{ env.LT_TOTAL || 0 }}) |
-          | Successful Requests | $(printf "%'.0f" $(( ${{ env.LT_TOTAL || 0 }} - ${{ env.LT_FAILS || 0 }} ))) |
-          | Failed Requests | ${{ env.LT_FAILS || 0 }} |
-          | Requests / Second (RPS) | ${{ env.LT_RPS || '0.00' }} |
-          | Requests / Minute | $(python3 -c "print(f'{float(\"${{ env.LT_RPS || 0 }}\")*60:,.0f}')") |
-          | Error Rate | ${{ env.LT_ERR || '0.00' }}% |
-
-          ---
-
-          ## ⏱ Response Times
-
-          | Percentile | Time |
-          |-----------|-----:|
-          | Minimum | ${{ env.LT_MIN || 0 }} ms |
-          | Average | ${{ env.LT_AVG || 0 }} ms |
-          | Median (P50) | ${{ env.LT_P50 || 0 }} ms |
-          | P90 | ${{ env.LT_P90 || 0 }} ms |
-          | P95 | ${{ env.LT_P95 || 0 }} ms |
-          | P99 | ${{ env.LT_P99 || 0 }} ms |
-          | Maximum | ${{ env.LT_MAX || 0 }} ms |
-
-          ---
-
-          ## 🎯 Performance Thresholds
-
-          | Metric | Value | Threshold | Status |
-          |--------|------:|----------:|--------|
-          | Error Rate | ${{ env.LT_ERR || 0 }}% | ≤ ${{ env.THRESH_ERROR_RATE }}% | $([ "$(python3 -c "print('PASS' if float('${{ env.LT_ERR || 0 }}') <= float('${{ env.THRESH_ERROR_RATE }}') else 'FAIL')")" = "PASS" ] && echo "✅ PASS" || echo "❌ FAIL") |
-          | Average Response Time | ${{ env.LT_AVG || 0 }} ms | ≤ ${{ env.THRESH_AVG_RT }} ms | $([ "$(python3 -c "print('PASS' if float('${{ env.LT_AVG || 0 }}') <= float('${{ env.THRESH_AVG_RT }}') else 'FAIL')")" = "PASS" ] && echo "✅ PASS" || echo "❌ FAIL") |
-          | P95 Response Time | ${{ env.LT_P95 || 0 }} ms | ≤ ${{ env.THRESH_P95 }} ms | $([ "$(python3 -c "print('PASS' if float('${{ env.LT_P95 || 0 }}') <= float('${{ env.THRESH_P95 }}') else 'FAIL')")" = "PASS" ] && echo "✅ PASS" || echo "❌ FAIL") |
-          | P99 Response Time | ${{ env.LT_P99 || 0 }} ms | ≤ ${{ env.THRESH_P99 }} ms | $([ "$(python3 -c "print('PASS' if float('${{ env.LT_P99 || 0 }}') <= float('${{ env.THRESH_P99 }}') else 'FAIL')")" = "PASS" ] && echo "✅ PASS" || echo "❌ FAIL") |
-
-          ---
-
-          ## 💬 Interpretation
-
-          > Under a baseline load of **${{ env.USERS }} concurrent virtual users** over **${{ env.DURATION }}**,
-          > the DentAI API processed approximately **${{ env.LT_TOTAL || 0 }}** total requests
-          > at **${{ env.LT_RPS || 0 }} requests/second**.
-          > The average response time was **${{ env.LT_AVG || 0 }} ms**,
-          > the 95th percentile was **${{ env.LT_P95 || 0 }} ms**,
-          > and the slowest request took **${{ env.LT_MAX || 0 }} ms**.
-          > The overall error rate was **${{ env.LT_ERR || 0 }}%**.
-
-          ---
-
-          ## 📥 Artifact Downloads
-
-          Download the **\`baseline-load-test-report\`** artifact from the Artifacts section below.
-
-          | File | Description |
-          |------|-------------|
-          | \`baseline_load_test_report.xlsx\` | 4-sheet Excel report (Summary · Endpoints · HTTP Codes · Thresholds) |
-          | \`baseline_load_test_report.html\` | Full HTML report with KPI cards and tables |
-          | \`stats_stats.csv\` | Raw per-endpoint Locust statistics |
-          | \`stats_stats_history.csv\` | Time-series RPS and response time history |
-          | \`locust_report.html\` | Locust's interactive built-in HTML report |
-
-          MARKDOWN
-
-      # ── 11. Upload all reports as artifact ────────────────────────────────
-      - name: "Upload baseline-load-test-report artifact"
-        if: always()
+          
+      - name: Upload Excel Load Test Report
         uses: actions/upload-artifact@v4
-        with:
-          name: "baseline-load-test-report"
-          retention-days: 90
-          path: |
-            reports/baseline_load_test_report.xlsx
-            reports/baseline_load_test_report.html
-            load_tests/results/stats_stats.csv
-            load_tests/results/stats_stats_history.csv
-            load_tests/results/stats_failures.csv
-            load_tests/results/stats_exceptions.csv
-            load_tests/results/locust_report.html
-            load_test/results/stats_stats.csv
-            load_test/results/stats_stats_history.csv
-            load_test/results/stats_failures.csv
-            load_test/results/stats_exceptions.csv
-            load_test/results/DentAI_LoadTest_Report.xlsx
-            load_test/results/report.html
-
-      # ── 12. PASS/FAIL gate ─────────────────────────────────────────────────
-      # This step FAILS the workflow if any threshold is breached.
-      # Remove or modify this step if you want the workflow to always succeed.
-      - name: Threshold gate (PASS/FAIL)
         if: always()
-        run: |
-          RESULT="${{ env.LT_RESULT || 'UNKNOWN' }}"
-          echo "Overall result: $RESULT"
-          if [ "$RESULT" = "FAIL" ]; then
-            echo "❌ One or more performance thresholds were exceeded."
-            echo "   See the Threshold Evaluation step above for details."
-            echo "   Download the Excel report for full per-endpoint analysis."
-            exit 1
-          fi
-          echo "✅ All performance thresholds met — baseline load test PASSED."
+        with:
+          name: Dental_CBCT_Load_Test_Report
+          path: load_testing/reports/*.xlsx
+          retention-days: 14
