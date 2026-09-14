@@ -89,6 +89,7 @@
 
       if (data.success) {
         store.set('user', { id: data.id, name: data.name, email: data.email });
+        localStorage.setItem('access_token', data.access_token);
         toast('Welcome back, Dr. ' + data.name, 'success');
         setTimeout(() => window.location.href = '/dashboard', 500);
       } else {

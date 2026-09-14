@@ -457,7 +457,7 @@
   setInterval(updateClock, 30000);
 
   /* ── Backend health check ── */
-  fetch('/').then(r => r.json()).then(() => {
+  fetch('/health').then(r => r.json()).then(() => {
     setStatus('backend-status', 'online');
     setStatus('model-status', 'online');
     setStatus('db-status', 'online');
@@ -499,7 +499,10 @@
   /* ── Load stats from /scans ── */
   async function loadStats() {
     try {
-      const res  = await fetch('/scans');
+      const token = localStorage.getItem('access_token');
+      const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+      const res  = await fetch('/scans', { headers });
+      if (res.status === 401) { store.clear(); localStorage.removeItem('access_token'); window.location.href = '/login'; return; }
       const data = await res.json();
       const scans = data.scans || [];
 

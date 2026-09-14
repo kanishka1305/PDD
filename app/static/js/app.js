@@ -12,7 +12,10 @@ const store = {
 
 /* ── Auth guards ── */
 function requireAuth()  { if (!store.get('user')) window.location.href = '/login'; }
-function requireGuest() { if ( store.get('user')) window.location.href = '/dashboard'; }
+function requireGuest() {
+  // Only redirect if user AND token are present
+  if (store.get('user') && localStorage.getItem('access_token')) window.location.href = '/dashboard';
+}
 
 /* ── Sidebar population ── */
 function populateSidebar() {
@@ -25,21 +28,27 @@ function populateSidebar() {
 }
 
 /* ── Logout ── */
-function logout() { store.clear(); window.location.href = '/login'; }
+function logout() { store.clear(); localStorage.removeItem('access_token'); window.location.href = '/login'; }
 
-/* ── POST form-encoded ── */
+/* ── POST form-encoded (auto-attaches JWT if present) ── */
 async function postForm(endpoint, data) {
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  const token = localStorage.getItem('access_token');
+  if (token) headers['Authorization'] = 'Bearer ' + token;
   const res = await fetch(API + endpoint, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: headers,
     body:    new URLSearchParams(data).toString()
   });
   return res.json();
 }
 
-/* ── POST multipart ── */
+/* ── POST multipart (auto-attaches JWT if present) ── */
 async function postFile(endpoint, formData) {
-  const res = await fetch(API + endpoint, { method: 'POST', body: formData });
+  const headers = {};
+  const token = localStorage.getItem('access_token');
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API + endpoint, { method: 'POST', headers: headers, body: formData });
   return res.json();
 }
 
