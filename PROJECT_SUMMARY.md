@@ -100,7 +100,420 @@ The system is used by dental professionals (doctors) who log in with a licensed 
 
 ### Android Native App (Dental-segment-frontend/)
 - Kotlin / Gradle
-- Compiled to `.apk`
+- Compiled to `.apk`Update my existing GitHub repository to add a complete **Baseline/Load Testing framework** integrated with **GitHub Actions**.
+
+### Objective
+
+I need GitHub Actions to automatically perform a baseline load test against my API and generate a professional test report.
+
+The baseline test configuration must be:
+
+* **100 virtual users**
+* **1 minute continuous test**
+* Multiple requests generated during the test
+* Measure API performance under normal expected concurrent load
+* Automatically generate a report after the test
+* Upload the report as a GitHub Actions artifact
+
+### 1. Inspect the Existing Project
+
+First inspect the repository and identify:
+
+* Backend/API framework
+* API base URL
+* Existing API endpoints
+* Existing test framework
+* Existing GitHub Actions workflows
+* Existing Selenium/pytest testing infrastructure
+* Existing report generation
+* Existing environment variables/secrets
+
+Do NOT break or remove the existing tests.
+
+Reuse the existing project structure wherever possible.
+
+### 2. Load Testing Tool
+
+Use **Locust** for the load testing implementation unless the project already contains another suitable load-testing framework.
+
+Create a dedicated directory:
+
+`load_tests/`
+
+Create:
+
+`load_tests/locustfile.py`
+
+The Locust test must:
+
+* Support 100 concurrent virtual users
+* Run for 1 minute
+* Send realistic requests to the application's API
+* Measure successful and failed requests
+* Record response times
+* Handle API authentication if required using GitHub Secrets/environment variables
+* Avoid hardcoding passwords, tokens, API keys, or sensitive information
+
+If multiple important API endpoints exist, include the most important production-like endpoints in the test.
+
+### 3. Required Performance Metrics
+
+The test must collect and report at least:
+
+#### Requests
+
+* Total Requests
+* Successful Requests
+* Failed Requests
+* Requests Per Second (RPS)
+* Requests Per Minute
+
+#### Response Time
+
+* Minimum Response Time
+* Average Response Time
+* Median Response Time
+* 90th Percentile (P90)
+* 95th Percentile (P95)
+* 99th Percentile (P99)
+* Maximum Response Time
+
+#### Reliability
+
+* Failure/Error Count
+* Error Rate %
+* HTTP status code distribution
+* Timeout count, if applicable
+
+#### Load
+
+* Virtual Users: 100
+* Test Duration: 60 seconds
+* Start time
+* End time
+
+### 4. Example Report Format
+
+Generate a report similar to:
+
+# BASELINE LOAD TEST REPORT
+
+## Test Configuration
+
+Virtual Users       : 100
+Duration             : 1 minute
+Environment          : Test
+Target API           : <API URL>
+
+## REQUEST SUMMARY
+
+Total Requests       : 7,250
+Successful Requests  : 7,210
+Failed Requests      : 40
+Requests/sec (RPS)   : 120.8
+Requests/min         : 7,250
+Error Rate           : 0.55%
+
+## RESPONSE TIME
+
+Minimum              : 50 ms
+Average              : 250 ms
+Median               : 180 ms
+P90                  : 420 ms
+P95                  : 550 ms
+P99                  : 900 ms
+Maximum              : 1,500 ms
+
+## INTERPRETATION
+
+Fastest response     : 50 ms
+Average response     : 250 ms
+Slowest response     : 1.5 seconds
+
+## STATUS
+
+Result               : PASS
+
+The report should clearly explain what each metric means.
+
+### 5. Excel Report
+
+IMPORTANT:
+
+I specifically need the performance test report in **Excel format (.xlsx)**.
+
+Generate:
+
+`reports/baseline_load_test_report.xlsx`
+
+The Excel file should contain separate sheets:
+
+#### Sheet 1 – Summary
+
+Include:
+
+* Test name
+* Test date/time
+* Environment
+* Target URL
+* Virtual users
+* Duration
+* Total requests
+* Successful requests
+* Failed requests
+* RPS
+* Error rate
+* Min response time
+* Average response time
+* Median response time
+* P90
+* P95
+* P99
+* Max response time
+* Overall result
+
+#### Sheet 2 – Endpoint Statistics
+
+Columns:
+
+Endpoint | Method | Requests | Failures | Error Rate | Avg Response (ms) | Min (ms) | Max (ms) | P90 (ms) | P95 (ms) | P99 (ms)
+
+#### Sheet 3 – HTTP Status Codes
+
+Columns:
+
+Status Code | Count | Percentage
+
+For example:
+
+200 | 7100 | 97.93%
+400 | 20 | 0.28%
+401 | 10 | 0.14%
+500 | 20 | 0.28%
+
+#### Sheet 4 – Performance Summary
+
+Include a clean table:
+
+Metric | Value | Unit | Status
+
+Example:
+
+Average Response Time | 250 | ms | PASS
+P95 Response Time | 550 | ms | PASS
+P99 Response Time | 900 | ms | PASS
+RPS | 120.8 | requests/sec | PASS
+Error Rate | 0.55 | % | PASS
+
+Add basic Excel formatting, headers, borders, readable column widths, and conditional PASS/FAIL formatting.
+
+### 6. HTML Report
+
+Also generate:
+
+`reports/baseline_load_test_report.html`
+
+The HTML report should contain:
+
+* Test configuration
+* Request statistics
+* Response-time statistics
+* Endpoint statistics
+* Error statistics
+* HTTP status code distribution
+* Overall PASS/FAIL result
+* Human-readable interpretation
+
+Make it professional and easy to understand.
+
+### 7. GitHub Actions Workflow
+
+Create or update:
+
+`.github/workflows/load-test.yml`
+
+The workflow should:
+
+1. Checkout repository
+2. Set up Python
+3. Install dependencies
+4. Start the backend/API if required
+5. Wait until the API is ready
+6. Run the Locust baseline test
+7. Generate the Excel report
+8. Generate the HTML report
+9. Generate a CSV/raw results file if useful
+10. Display important results in the GitHub Actions console
+11. Upload all reports as GitHub Actions artifacts
+
+Artifact name:
+
+`baseline-load-test-report`
+
+The artifact should contain:
+
+* `baseline_load_test_report.xlsx`
+* `baseline_load_test_report.html`
+* Raw Locust results
+* CSV statistics if generated
+* Any useful performance graphs
+
+### 8. GitHub Actions Summary
+
+Very important:
+
+Use the GitHub Actions Job Summary (`$GITHUB_STEP_SUMMARY`) to display a readable summary directly on the workflow run page.
+
+Example:
+
+# Baseline Load Test Report
+
+| Metric         |     Result |
+| -------------- | ---------: |
+| Virtual Users  |        100 |
+| Duration       | 60 seconds |
+| Total Requests |      7,250 |
+| RPS            |      120.8 |
+| Avg Response   |     250 ms |
+| P95            |     550 ms |
+| P99            |     900 ms |
+| Max Response   |   1,500 ms |
+| Error Rate     |      0.55% |
+| Result         |       PASS |
+
+Also include:
+
+## Response Time
+
+* Minimum: 50 ms
+* Average: 250 ms
+* P95: 550 ms
+* P99: 900 ms
+* Maximum: 1,500 ms
+
+## Interpretation
+
+Explain the results in simple language.
+
+For example:
+
+"Under a load of 100 concurrent virtual users, the API processed approximately 120 requests per second. The average response time was 250 ms and the slowest response was 1.5 seconds. The error rate was 0.55%."
+
+### 9. Performance Thresholds
+
+Implement configurable thresholds using environment variables.
+
+Default thresholds:
+
+* Maximum error rate: 1%
+* Average response time: 500 ms
+* P95 response time: 1000 ms
+* P99 response time: 2000 ms
+
+The workflow should mark the test as:
+
+PASS
+
+when all configured thresholds are satisfied.
+
+Otherwise:
+
+FAIL
+
+The workflow must clearly show which metric caused the failure.
+
+Do NOT fail the workflow simply because the API returns an expected non-2xx response if that response is intentionally part of the test. Distinguish expected application responses from actual request failures where possible.
+
+### 10. Configuration
+
+Do not hardcode environment-specific URLs.
+
+Use GitHub Actions environment variables/secrets such as:
+
+`BASE_URL`
+
+`API_TOKEN`
+
+and any other required credentials.
+
+Use GitHub Secrets for sensitive values.
+
+The load-test configuration should allow easy modification of:
+
+* Number of users
+* Spawn rate
+* Test duration
+* API URL
+* Performance thresholds
+
+For example:
+
+`USERS=100`
+
+`DURATION=60s`
+
+### 11. Local Execution
+
+Also make it possible to run the same test locally.
+
+Provide commands such as:
+
+`pip install -r requirements.txt`
+
+and an appropriate Locust command for the 100-user, 60-second baseline test.
+
+Document this in:
+
+`load_tests/README.md`
+
+### 12. Requirements
+
+Update the appropriate requirements file with all required dependencies.
+
+Do not duplicate dependencies unnecessarily.
+
+Use stable versions compatible with the existing project.
+
+### 13. Important Safety Requirements
+
+Before implementing anything:
+
+* Inspect the existing repository.
+* Do not delete existing tests.
+* Do not modify unrelated application functionality.
+* Do not expose secrets.
+* Do not commit `.env` files containing credentials.
+* Do not hardcode production credentials.
+* Reuse the existing API configuration where possible.
+
+### 14. Final Verification
+
+After implementation:
+
+1. Run the load test locally if possible.
+2. Verify the API starts correctly.
+3. Verify Locust reaches 100 virtual users.
+4. Verify the test runs for approximately 60 seconds.
+5. Verify metrics are collected.
+6. Verify the Excel file is generated.
+7. Verify the HTML report is generated.
+8. Verify GitHub Actions YAML syntax.
+9. Verify the artifacts are uploaded.
+10. Verify `$GITHUB_STEP_SUMMARY` displays the results.
+11. Verify PASS/FAIL threshold logic.
+12. Run the existing automated tests to ensure nothing was broken.
+
+Finally, provide a concise summary of:
+
+* Files created
+* Files modified
+* How to run the load test locally
+* How to trigger it in GitHub Actions
+* Where the Excel report can be downloaded
+* Where the HTML report can be viewed
+* Performance thresholds used
+* Any assumptions made about the API
+
 
 ### Automation / Testing
 | Component | Technology |
@@ -560,3 +973,5 @@ BASE_URL = 'http://172.23.51.65:8000'   # LAN IP for physical device testing
 | POM | Page Object Model — design pattern where each UI page has a Python class |
 | ARGB | Alpha-Red-Green-Blue — 8-character hex color format required by openpyxl |
 | JWT | JSON Web Token — stateless auth token signed with a secret key |
+
+
