@@ -1,0 +1,128 @@
+name: Load Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target API URL for load testing'
+        required: true
+        default: 'http://127.0.0.1:8000'
+      users:
+        description: 'Number of virtual users'
+        required: true
+        default: '100'
+      spawn_rate:
+        description: 'Users to spawn per second'
+        required: true
+        default: '10'
+      duration:
+        description: 'Test duration (e.g., 1m, 60s)'
+        required: true
+        default: '60s'
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dental_ai
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    concurrency:
+      group: load-testing-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install locust openpyxl uvicorn fastapi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-load-testing.txt ]; then pip install -r requirements-load-testing.txt; fi
+
+      - name: Initialize Database
+        run: |
+          if [ -f setup_db.py ]; then
+            python setup_db.py || true
+          fi
+
+      - name: Start backend service
+        if: startsWith(github.event.inputs.target_url, 'http://127.0.0.1') || startsWith(github.event.inputs.target_url, 'http://localhost')
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: dental_ai
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          echo "BACKEND_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for API health endpoint
+        run: |
+          TARGET="${{ github.event.inputs.target_url }}"
+          echo "Waiting for $TARGET/health to be available..."
+          timeout 60 bash -c 'until curl -s -f "$0/health" > /dev/null; do sleep 2; done' "$TARGET"
+
+      - name: Run Locust Load Test
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          LOCUST_HOST: ${{ github.event.inputs.target_url }}
+        run: |
+          mkdir -p reports/load_testing
+          locust -f tests/load/locustfile.py \
+            --headless \
+            -u ${{ github.event.inputs.users }} \
+            -r ${{ github.event.inputs.spawn_rate }} \
+            --run-time ${{ github.event.inputs.duration }} \
+            --host ${{ github.event.inputs.target_url }} \
+            --csv=reports/load_testing/locust_stats
+
+      - name: Generate Excel Report
+        if: always()
+        env:
+          EXPECTED_USERS: ${{ github.event.inputs.users }}
+          EXPECTED_DURATION: 60
+          GITHUB_ACTIONS: "true"
+        run: |
+          python tests/load/test_report_generator.py \
+            --csv-prefix reports/load_testing/locust_stats \
+            --output reports/load_testing/load_test_report.xlsx \
+            --project "Dental AI" \
+            --commit ${{ github.sha }} \
+            --branch ${{ github.ref_name }} \
+            --url ${{ github.event.inputs.target_url }}
+
+      - name: Upload Test Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-testing-report-${{ github.sha }}
+          path: |
+            reports/load_testing/load_test_report.xlsx
+            reports/load_testing/*.csv
+          retention-days: 30
+
+      - name: Clean up backend
+        if: always() && env.BACKEND_PID != ''
+        run: |
+          kill $BACKEND_PID || true
