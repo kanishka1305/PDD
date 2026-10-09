@@ -1,4 +1,4 @@
-"""
+﻿"""
 HTML + Excel Report Generator for Automation Results
 """
 import json, os, sys
@@ -35,7 +35,7 @@ def generate_html_report(results: list, summary: dict, output_path: Path = None)
         badge = f'<span style="background:{"#28a745" if s=="PASS" else "#dc3545" if s=="FAIL" else "#ffc107"};color:#fff;padding:2px 8px;border-radius:3px;font-size:11px">{s}</span>'
         ss = ""
         if r.get("screenshot"):
-            ss = f'<a href="{r["screenshot"]}" target="_blank">📷</a>'
+            ss = f'<a href="{r["screenshot"]}" target="_blank">ðŸ“·</a>'
         rows += f"""
         <tr style="background:{bg}">
           <td style="padding:6px;border:1px solid #dee2e6;font-size:12px">{r.get("test_id","")}</td>
@@ -72,7 +72,7 @@ def generate_html_report(results: list, summary: dict, output_path: Path = None)
   th{{background:#2c3e50;color:#fff;padding:10px;text-align:left;font-size:13px}}
 </style></head><body>
 <div class="header">
-  <h1>🦷 DentAI — E2E Automation Report</h1>
+  <h1>ðŸ¦· DentAI â€” E2E Automation Report</h1>
   <p>Deployment URL: <a href="{BASE_URL}" style="color:#3498db">{BASE_URL}</a></p>
   <p>Generated: {ts} | Framework: Selenium + Python + pytest</p>
 </div>
@@ -85,12 +85,12 @@ def generate_html_report(results: list, summary: dict, output_path: Path = None)
     <div class="card"><div class="num" style="color:{"#28a745" if failed==0 else "#dc3545"}">{rate}</div><div class="lbl">Pass Rate</div></div>
   </div>
   <div class="section">
-    <h2>📊 Results by Module</h2>
+    <h2>ðŸ“Š Results by Module</h2>
     <table><thead><tr><th>Module</th><th style="text-align:center">Total</th><th style="text-align:center">Pass</th><th style="text-align:center">Fail</th><th style="text-align:center">Rate</th></tr></thead>
     <tbody>{cat_rows}</tbody></table>
   </div>
   <div class="section">
-    <h2>📋 All Test Results ({total} tests | Duration: {duration:.1f}s)</h2>
+    <h2>ðŸ“‹ All Test Results ({total} tests | Duration: {duration:.1f}s)</h2>
     <table><thead><tr><th>Test ID</th><th>Module</th><th>Test Name</th><th>Status</th><th>Duration</th><th>Failure Reason</th><th>SS</th></tr></thead>
     <tbody>{rows}</tbody></table>
   </div>
@@ -108,7 +108,7 @@ def generate_excel_report(results: list, summary: dict):
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
     wb = openpyxl.Workbook()
-    # ⚠️ openpyxl requires 8-character ARGB format: AARRGGBB (alpha + RGB)
+    # âš ï¸ openpyxl requires 8-character ARGB format: AARRGGBB (alpha + RGB)
     # Leading "FF" = fully opaque
     DK="FF1A252F"; GR="FFECF0F1"; WH="FFFFFFFF"
     PAS="FF28A745"; FAI="FFDC3545"; SKP="FFFFC107"
@@ -134,7 +134,7 @@ def generate_excel_report(results: list, summary: dict):
         for i,w in enumerate(widths,1):
             ws.column_dimensions[get_column_letter(i)].width=w
 
-    # ── Sheet 1: All Tests ────────────────────────────────────────────────────
+    # â”€â”€ Sheet 1: All Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws1 = wb.active; ws1.title = "All Test Cases"
     headers = ["Test ID","Module","Test Name","Status","Duration(s)","Failure Reason","Screenshot","Timestamp"]
     set_header(ws1, headers, 1)
@@ -153,7 +153,7 @@ def generate_excel_report(results: list, summary: dict):
     col_widths(ws1,[30,22,50,10,12,50,40,22])
     ws1.freeze_panes="A2"
 
-    # ── Sheet 2: Passed ───────────────────────────────────────────────────────
+    # â”€â”€ Sheet 2: Passed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws2 = wb.create_sheet("Passed Tests")
     set_header(ws2, ["Test ID","Module","Test Name","Duration(s)","Timestamp"], bg=PAS)
     passed = [r for r in results if r.get("status")=="PASS"]
@@ -165,7 +165,7 @@ def generate_excel_report(results: list, summary: dict):
         ws2.row_dimensions[idx].height=18
     col_widths(ws2,[30,22,50,12,22])
 
-    # ── Sheet 3: Failed ───────────────────────────────────────────────────────
+    # â”€â”€ Sheet 3: Failed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws3 = wb.create_sheet("Failed Tests")
     set_header(ws3, ["Test ID","Module","Test Name","Failure Reason","Duration(s)","Screenshot"], bg=FAI)
     failed = [r for r in results if r.get("status")=="FAIL"]
@@ -178,7 +178,7 @@ def generate_excel_report(results: list, summary: dict):
         ws3.row_dimensions[idx].height=22
     col_widths(ws3,[30,22,50,60,12,40])
 
-    # ── Sheet 4: Skipped ──────────────────────────────────────────────────────
+    # â”€â”€ Sheet 4: Skipped â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws4 = wb.create_sheet("Skipped Tests")
     set_header(ws4, ["Test ID","Module","Test Name","Reason"], bg=SKP)
     skipped = [r for r in results if r.get("status") not in ("PASS","FAIL")]
@@ -190,7 +190,7 @@ def generate_excel_report(results: list, summary: dict):
         ws4.row_dimensions[idx].height=18
     col_widths(ws4,[30,22,50,60])
 
-    # ── Sheet 5: Execution Metrics ────────────────────────────────────────────
+    # â”€â”€ Sheet 5: Execution Metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws5 = wb.create_sheet("Execution Metrics")
     total=len(results); pct=f"{len(passed)/total*100:.1f}%" if total else "0%"
     metrics = [
@@ -216,7 +216,7 @@ def generate_excel_report(results: list, summary: dict):
             ws5.cell(idx,c).fill=fill(GR if idx%2==0 else WH)
     col_widths(ws5,[30,50])
 
-    # ── Sheet 6: Defect Summary ───────────────────────────────────────────────
+    # â”€â”€ Sheet 6: Defect Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ws6 = wb.create_sheet("Defect Summary")
     set_header(ws6,["Defect ID","Test ID","Module","Defect Title","Severity","Status","Screenshot"],bg=FAI)
     for idx,r in enumerate([r for r in results if r.get("status")=="FAIL"],2):
@@ -231,12 +231,12 @@ def generate_excel_report(results: list, summary: dict):
     out = EXCEL_DIR / "Automation_Test_Report.xlsx"
     try:
         wb.save(str(out))
-        print(f"✓ Main report saved: {out} ({out.stat().st_size:,} bytes)")
+        print(f"âœ“ Main report saved: {out} ({out.stat().st_size:,} bytes)")
     except Exception as e:
-        print(f"✗ FAILED to save {out}: {e}", file=sys.stderr)
+        print(f"âœ— FAILED to save {out}: {e}", file=sys.stderr)
         raise
 
-    # ── Separate workbooks ────────────────────────────────────────────────────
+    # â”€â”€ Separate workbooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     def mini_wb(rows, title, path, bg):
         w=openpyxl.Workbook(); s=w.active; s.title=title
         set_header(s,["Test ID","Module","Test Name","Status","Duration","Failure"],bg=bg)
@@ -250,9 +250,9 @@ def generate_excel_report(results: list, summary: dict):
         file_path = EXCEL_DIR/path
         try:
             w.save(str(file_path))
-            print(f"✓ {path} saved ({file_path.stat().st_size:,} bytes)")
+            print(f"âœ“ {path} saved ({file_path.stat().st_size:,} bytes)")
         except Exception as e:
-            print(f"✗ FAILED to save {path}: {e}", file=sys.stderr)
+            print(f"âœ— FAILED to save {path}: {e}", file=sys.stderr)
             raise
 
     mini_wb(passed,  "Passed Tests",  "Passed_Test_Cases.xlsx",  PAS)
@@ -276,9 +276,9 @@ def generate_excel_report(results: list, summary: dict):
     summary_path = EXCEL_DIR/"Summary_Report.xlsx"
     try:
         sw.save(str(summary_path))
-        print(f"✓ Summary_Report.xlsx saved ({summary_path.stat().st_size:,} bytes)")
+        print(f"âœ“ Summary_Report.xlsx saved ({summary_path.stat().st_size:,} bytes)")
     except Exception as e:
-        print(f"✗ FAILED to save Summary_Report.xlsx: {e}", file=sys.stderr)
+        print(f"âœ— FAILED to save Summary_Report.xlsx: {e}", file=sys.stderr)
         raise
 
     return out

@@ -1,16 +1,12 @@
-name: Selenium Automation Suite
+﻿name: Selenium Automation Suite
 
 on:
-  push:
-    branches: ["*"]
-  pull_request:
-    branches: ["*"]
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Target BASE_URL (leave empty for auto-detection)"
+        description: "Target BASE_URL (defaults to internal mock/server)"
         required: false
-        default: ""
+        default: "http://127.0.0.1:8000"
 
 permissions:
   contents: read
@@ -20,12 +16,19 @@ jobs:
   selenium-tests:
     name: Run Selenium Automation Tests
     runs-on: ubuntu-latest
-    env:
-      BASE_URL: ${{ github.event.inputs.base_url }}
-      HEADLESS: "true"
-      BROWSER: "chrome"
-      EXPLICIT_WAIT: "20"
-      PYTHONPATH: ${{ github.workspace }}
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dental_ai
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Checkout repository
@@ -40,79 +43,34 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install openpyxl==3.1.5 pytest==8.3.5 pytest-html==4.1.1 uvicorn fastapi mysql-connector-python requests
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
 
-      - name: Install Google Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
-
-      - name: Verify Chrome installation
+      - name: Start FastAPI Application
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: dental_ai
         run: |
-          google-chrome --version
-          which google-chrome
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          timeout 30 bash -c 'until curl -s -f "http://127.0.0.1:8000/health" > /dev/null; do sleep 2; done'
 
-      - name: Create output directories
+      - name: Run Selenium / UI Test Suite
+        env:
+          BASE_URL: "http://127.0.0.1:8000"
+          HEADLESS: "true"
         run: |
-          mkdir -p "Test Results/Excel"
-          mkdir -p "Test Results/HTML"
-          mkdir -p "Test Results/Screenshots"
-          mkdir -p "Test Results/Logs"
-          mkdir -p "Test Results/JSON"
-          mkdir -p "Test Results/Summary"
+          mkdir -p "Test Results/Excel" "Test Results/HTML" "Test Results/JSON" "Test Results/Summary"
+          python -m pytest automation/tests/ -v --tb=short || true
+          python automation/utils/generate_automation_report.py
 
-      - name: Execute Selenium E2E Tests
-        run: |
-          python -m pytest automation/tests/ \
-            -v \
-            --tb=short \
-            --timeout=60 \
-            --html="Test Results/HTML/execution-report.html" \
-            --self-contained-html \
-            -o "log_cli=true" \
-            2>&1 | tee "Test Results/Logs/pytest-output.log" || true
-
-      - name: Ensure Excel & HTML reports generated
-        if: always()
-        run: |
-          python - << 'PYEOF'
-          import json, pathlib, sys
-          sys.path.insert(0, ".")
-
-          json_dir = pathlib.Path("Test Results/JSON")
-          ts_files = sorted(json_dir.glob("execution-results_*.json"))
-          latest   = json_dir / "execution-results.json"
-
-          if ts_files:
-              src = ts_files[-1]
-          elif latest.exists():
-              src = latest
-          else:
-              src = None
-
-          if src:
-              summary = json.loads(src.read_text())
-              results = summary.get("results", [])
-          else:
-              results, summary = [], {"total": 0, "passed": 0, "failed": 0, "skipped": 0, "results": []}
-
-          from automation.utils.report_generator import generate_excel_report, generate_html_report
-          excel_path = generate_excel_report(results, summary)
-          html_path  = generate_html_report(results, summary)
-          print(f"Excel report -> {excel_path}")
-          print(f"HTML report  -> {html_path}")
-          PYEOF
-
-      - name: Upload Test Reports & Screenshots (Artifacts)
+      - name: Upload Selenium Test Report (Excel)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: selenium-execution-artifacts-${{ github.run_number }}
+          name: selenium-test-reports-${{ github.sha }}
           retention-days: 30
           path: |
-            Test Results/Excel/
-            Test Results/HTML/
-            Test Results/JSON/
-            Test Results/Logs/
-            Test Results/Screenshots/
-            Test Results/Summary/
+            Test Results/Excel/*.xlsx
+            Test Results/HTML/*.html

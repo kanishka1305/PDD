@@ -1,5 +1,5 @@
-"""
-Standalone script — generates the Excel report from SIMULATED test results.
+﻿"""
+Standalone script â€” generates the Excel report from SIMULATED test results.
 Run: python automation/utils/generate_automation_report.py
 """
 import sys, os, random
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from automation.utils.report_generator import generate_excel_report, generate_html_report
 from automation.config.settings import EXCEL_DIR, HTML_DIR, SUMMARY_DIR
 
-# ── Simulated test catalog (400 tests) ───────────────────────────────────────
+# â”€â”€ Simulated test catalog (400 tests) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CATEGORIES = {
     "test_authentication":    40,
     "test_authorization":     40,
@@ -42,21 +42,21 @@ PASS_RATES = {
 }
 
 FAILURE_REASONS = [
-    "AssertionError: Element not visible — SEC-002 No Auth on endpoint",
-    "AssertionError: Expected HTTP 401 but got 200 — Missing authentication",
-    "AssertionError: IDOR not blocked — SEC-004 Broken Access Control",
+    "AssertionError: Element not visible â€” SEC-002 No Auth on endpoint",
+    "AssertionError: Expected HTTP 401 but got 200 â€” Missing authentication",
+    "AssertionError: IDOR not blocked â€” SEC-004 Broken Access Control",
     "TimeoutException: Element .error-message not found after 20s",
     "AssertionError: URL still 'login' after valid submit",
-    "AssertionError: Reset token found in response body — SEC-007",
+    "AssertionError: Reset token found in response body â€” SEC-007",
     "AssertionError: XSS payload not escaped in page source",
     "AssertionError: Horizontal scroll detected at 320px width",
     "AssertionError: P95 response time 3200ms exceeds 2000ms threshold",
-    "AssertionError: X-Frame-Options header missing — SEC-016",
+    "AssertionError: X-Frame-Options header missing â€” SEC-016",
     "AssertionError: Password type=text, expected type=password",
     "AssertionError: dashboard accessible without authentication",
     "NoSuchElementException: No element found for CSS selector 'label[for]'",
     "AssertionError: Content-Security-Policy header not set",
-    "AssertionError: Token in API response body — SEC-007",
+    "AssertionError: Token in API response body â€” SEC-007",
 ]
 
 def make_results():
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     # Write summary.md
     rate = f"{passed/total*100:.1f}%"
-    md = f"""# DentAI — Automation Test Execution Summary
+    md = f"""# DentAI â€” Automation Test Execution Summary
 **Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Deployment URL:** https://skani.github.io/dental-ai/
 **Framework:** Selenium WebDriver + pytest
@@ -119,11 +119,11 @@ if __name__ == "__main__":
 """
     (SUMMARY_DIR / "summary.md").write_text(md, encoding="utf-8")
 
-    print(f"\n✓ Total:  {total}")
-    print(f"✓ Passed: {passed}")
-    print(f"✓ Failed: {failed}")
-    print(f"✓ Rate:   {rate}")
-    print(f"\n✓ Excel report  → {excel_out}")
-    print(f"✓ HTML report   → {html_out}")
-    print(f"✓ Summary       → {SUMMARY_DIR/'summary.md'}")
+    print(f"\nâœ“ Total:  {total}")
+    print(f"âœ“ Passed: {passed}")
+    print(f"âœ“ Failed: {failed}")
+    print(f"âœ“ Rate:   {rate}")
+    print(f"\nâœ“ Excel report  â†’ {excel_out}")
+    print(f"âœ“ HTML report   â†’ {html_out}")
+    print(f"âœ“ Summary       â†’ {SUMMARY_DIR/'summary.md'}")
     print("\nAll files saved to Test Results/")
